@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="22gWSPi1j1ToiVIYwq4NuPNrBC1KG3Ao8Bo1r2rd">
+    <title>لوحة الرئيسية — KNOOZ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="http://127.0.0.1:8765/css/admin.css" rel="stylesheet">
+        <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('knooz-theme');
+                if (t) document.documentElement.setAttribute('data-theme', t);
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body class="admin-body">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="admin-shell">
+        <aside class="admin-sidebar" id="adminSidebar">
+    <div class="brand">
+        <span class="brand-mark">K</span>
+        <span>KNOOZ</span>
+    </div>
+
+    <nav class="sidebar-nav">
+                                                <a href="http://127.0.0.1:8765/admin" class="nav-link active">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>لوحة الرئيسية</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/users" class="nav-link ">
+                    <i class="bi bi-people"></i>
+                    <span>المستخدمون الأفراد</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/companies" class="nav-link ">
+                    <i class="bi bi-building"></i>
+                    <span>الشركات</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/centers" class="nav-link ">
+                    <i class="bi bi-geo-alt"></i>
+                    <span>مراكز الخدمة</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/requests" class="nav-link ">
+                    <i class="bi bi-inbox"></i>
+                    <span>الطلبات والشكاوي</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/payments" class="nav-link ">
+                    <i class="bi bi-wallet2"></i>
+                    <span>المحافظ والمدفوعات</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/vehicles" class="nav-link ">
+                    <i class="bi bi-car-front"></i>
+                    <span>المركبات</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/reports" class="nav-link ">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>التقارير والتحليلات</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/offers" class="nav-link ">
+                    <i class="bi bi-megaphone"></i>
+                    <span>العروض والإعلانات</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/settings" class="nav-link ">
+                    <i class="bi bi-gear"></i>
+                    <span>الإعدادات</span>
+                </a>
+                                                            <a href="http://127.0.0.1:8765/admin/roles" class="nav-link ">
+                    <i class="bi bi-shield-lock"></i>
+                    <span>الصلاحيات والأدوار</span>
+                </a>
+                        </nav>
+
+    <div class="sidebar-footer">
+        <div class="avatar">م</div>
+        <div class="min-w-0">
+            <div class="fw-bold text-truncate">مدير النظام</div>
+            <div class="text-muted small">مدير النظام</div>
+        </div>
+    </div>
+</aside>
+        <div class="admin-main">
+            <header class="admin-header">
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="icon-btn d-lg-none" data-sidebar-toggle aria-label="القائمة">
+            <i class="bi bi-list"></i>
+        </button>
+        <nav aria-label="breadcrumb" class="d-none d-md-block">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="http://127.0.0.1:8765/admin">KNOOZ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">لوحة الرئيسية</li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="header-actions">
+        <form action="#" method="GET" class="d-none d-md-block">
+            <input type="search" name="q" value="" class="search-box" placeholder="بحث...">
+        </form>
+
+        <a href="http://127.0.0.1:8765/admin/notifications" class="icon-btn position-relative" title="الإشعارات">
+            <i class="bi bi-bell"></i>
+                    </a>
+
+        <button type="button"
+                class="icon-btn"
+                data-theme-toggle
+                data-theme-url="http://127.0.0.1:8765/admin/settings/theme"
+                title="تبديل الثيم">
+            <i class="bi bi-moon-stars"></i>
+        </button>
+
+        <div class="dropdown">
+            <button class="user-chip dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <span class="dot">م</span>
+                <span class="d-none d-sm-inline">مدير النظام</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-start">
+                <li><a class="dropdown-item" href="http://127.0.0.1:8765/admin/settings/profile"><i class="bi bi-person ms-2"></i>الملف الشخصي</a></li>
+                                    <li><a class="dropdown-item" href="http://127.0.0.1:8765/admin/settings"><i class="bi bi-gear ms-2"></i>الإعدادات</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form method="POST" action="http://127.0.0.1:8765/logout">
+                        <input type="hidden" name="_token" value="22gWSPi1j1ToiVIYwq4NuPNrBC1KG3Ao8Bo1r2rd" autocomplete="off">                        <button class="dropdown-item text-danger" type="submit"><i class="bi bi-box-arrow-left ms-2"></i>تسجيل الخروج</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>
+            <main class="admin-content">
+                                <div class="page-title">لوحة الرئيسية</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl">
+        <div class="stat-card">
+    <div class="stat-icon"><i class="bi bi-people"></i></div>
+    <div class="stat-value">3</div>
+    <div class="stat-label">إجمالي المستخدمين</div>
+    <div class="stat-change up">
+        <i class="bi bi-arrow-up-short"></i>
+        100.0%
+    </div>
+</div>
+    </div>
+    <div class="col-6 col-xl">
+        <div class="stat-card">
+    <div class="stat-icon"><i class="bi bi-geo-alt"></i></div>
+    <div class="stat-value">2</div>
+    <div class="stat-label">مراكز نشطة</div>
+    <div class="stat-change up">
+        <i class="bi bi-arrow-up-short"></i>
+        100.0%
+    </div>
+</div>
+    </div>
+    <div class="col-6 col-xl">
+        <div class="stat-card">
+    <div class="stat-icon"><i class="bi bi-building"></i></div>
+    <div class="stat-value">1</div>
+    <div class="stat-label">شركات مسجلة</div>
+    <div class="stat-change up">
+        <i class="bi bi-arrow-up-short"></i>
+        100.0%
+    </div>
+</div>
+    </div>
+        <div class="col-6 col-xl">
+        <div class="stat-card">
+    <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
+    <div class="stat-value">1,700 ر.س</div>
+    <div class="stat-label">إجمالي الإيرادات</div>
+    <div class="stat-change up">
+        <i class="bi bi-arrow-up-short"></i>
+        100.0%
+    </div>
+</div>
+    </div>
+        <div class="col-6 col-xl">
+        <div class="stat-card">
+    <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+    <div class="stat-value">2</div>
+    <div class="stat-label">شكاوى مفتوحة</div>
+    <div class="stat-change up">
+        <i class="bi bi-arrow-up-short"></i>
+        100.0%
+    </div>
+</div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-5">
+        <div class="panel">
+            <div class="panel-header">
+                <strong>آخر العمليات</strong>
+            </div>
+            <div class="panel-body">
+                                    <div class="ops-item">
+                        <div class="ops-icon"><i class="bi bi-wrench"></i></div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-bold">50 ر.س</div>
+                            <div class="small text-muted text-truncate">
+                                أ ب ج 1234 · غسيل
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="status-badge success">مكتمل</span>
+                            <div class="small text-muted mt-1">منذ 22 ثانية</div>
+                        </div>
+                    </div>
+                                    <div class="ops-item">
+                        <div class="ops-icon"><i class="bi bi-wrench"></i></div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-bold">200 ر.س</div>
+                            <div class="small text-muted text-truncate">
+                                ش ر ك 1001 · كفرات
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="status-badge success">مكتمل</span>
+                            <div class="small text-muted mt-1">منذ 22 ثانية</div>
+                        </div>
+                    </div>
+                            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="panel">
+            <div class="panel-header">
+                <strong>الإيرادات</strong>
+                <div class="d-flex gap-1">
+                                            <button type="button" class="period-btn " data-period="yearly">سنوي</button>
+                                            <button type="button" class="period-btn active" data-period="monthly">شهري</button>
+                                            <button type="button" class="period-btn " data-period="weekly">أسبوعي</button>
+                                            <button type="button" class="period-btn " data-period="daily">يومي</button>
+                                    </div>
+            </div>
+            <div class="panel-body">
+                <canvas id="revenueChart" height="140"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="panel">
+            <div class="panel-header"><strong>نشاط المستخدمين</strong></div>
+            <div class="panel-body">
+                <canvas id="activityChart" height="180"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="panel">
+            <div class="panel-header"><strong>أسرع مراكز الخدمة</strong></div>
+            <div class="panel-body">
+                                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span>مركز كنوز الرياض</span>
+                        <span class="fw-bold text-primary">2</span>
+                    </div>
+                                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span>مركز النخبة جدة</span>
+                        <span class="fw-bold text-primary">0</span>
+                    </div>
+                            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="panel">
+            <div class="panel-header"><strong>توزيع الخدمات</strong></div>
+            <div class="panel-body">
+                <canvas id="servicesChart" height="180"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="http://127.0.0.1:8765/js/admin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const revenueData = {"labels":["\u062f\u064a\u0633\u0645\u0628\u0631","\u064a\u0646\u0627\u064a\u0631","\u0641\u0628\u0631\u0627\u064a\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064a\u0644","\u0645\u0627\u064a\u0648","\u064a\u0648\u0646\u064a\u0648","\u064a\u0648\u0644\u064a\u0648","\u0623\u063a\u0633\u0637\u0633","\u0633\u0628\u062a\u0645\u0628\u0631","\u0623\u0643\u062a\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631"],"values":[0,0,0,0,0,0,0,0,0,0,0,1700]};
+const serviceData = {"labels":["\u063a\u0633\u064a\u0644","\u0643\u0641\u0631\u0627\u062a"],"values":[1,1]};
+const activityData = {"labels":["\u0623\u0631\u0628\u0639\u0627\u0621","\u062e\u0645\u064a\u0633","\u062c\u0645\u0639\u0629","\u0633\u0628\u062a","\u0623\u062d\u062f","\u0627\u062b\u0646\u064a\u0646","\u062b\u0644\u0627\u062b\u0627\u0621"],"values":[0,0,0,0,0,0,1]};
+const chartUrl = "http:\/\/127.0.0.1:8765\/admin\/dashboard\/revenue-chart";
+
+const primary = '#F97316';
+const fill = getComputedStyle(document.documentElement).getPropertyValue('--chart-fill').trim() || 'rgba(249,115,22,.18)';
+
+const revenueChart = new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+        labels: revenueData.labels,
+        datasets: [{
+            data: revenueData.values,
+            borderColor: primary,
+            backgroundColor: fill,
+            fill: true,
+            tension: .35,
+            pointRadius: 3,
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true }
+        }
+    }
+});
+
+new Chart(document.getElementById('servicesChart'), {
+    type: 'doughnut',
+    data: {
+        labels: serviceData.labels,
+        datasets: [{
+            data: serviceData.values,
+            backgroundColor: [primary, '#2563EB', '#16A34A', '#7C3AED', '#64748B']
+        }]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('activityChart'), {
+    type: 'bar',
+    data: {
+        labels: activityData.labels,
+        datasets: [{
+            data: activityData.values,
+            backgroundColor: primary,
+            borderRadius: 8,
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+
+document.querySelectorAll('[data-period]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+        document.querySelectorAll('[data-period]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const res = await fetch(chartUrl + '?period=' + btn.dataset.period, {
+            headers: { Accept: 'application/json' }
+        });
+        const data = await res.json();
+        revenueChart.data.labels = data.labels;
+        revenueChart.data.datasets[0].data = data.values;
+        revenueChart.update();
+    });
+});
+</script>
+</body>
+</html>

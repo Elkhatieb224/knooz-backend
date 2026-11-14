@@ -1,0 +1,26 @@
+@props([
+    'label',
+    'value',
+    'change' => null,
+    'icon' => 'bi-graph-up',
+    'format' => 'number',
+])
+
+@php
+    $display = $format === 'money'
+        ? number_format((float) $value, 0).' ر.س'
+        : number_format((float) $value);
+@endphp
+
+<div class="stat-card">
+    <div class="stat-icon"><i class="bi {{ $icon }}"></i></div>
+    <div class="stat-value">{{ $display }}</div>
+    <div class="stat-label">{{ $label }}</div>
+    @if ($change !== null)
+        @php $isUp = (float) $change >= 0; @endphp
+        <div class="stat-change {{ $isUp ? 'up' : 'down' }}">
+            <i class="bi {{ $isUp ? 'bi-arrow-up-short' : 'bi-arrow-down-short' }}"></i>
+            {{ number_format(abs((float) $change), 1) }}%
+        </div>
+    @endif
+</div>

@@ -1,0 +1,131 @@
+.notification-dropdown .dropdown-menu {
+  width: min(380px, calc(100vw - 1.5rem));
+  overflow: hidden;
+}
+
+.notification-menu-head,
+.notification-menu-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.notification-menu-foot {
+  border-bottom: 0;
+  border-top: 1px solid var(--border);
+  justify-content: center;
+}
+
+.notification-menu-foot a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.notification-menu-body {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.notification-item {
+  display: flex;
+  gap: .75rem;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.notification-item:last-child {
+  border-bottom: 0;
+}
+
+.notification-item:hover {
+  background: var(--primary-soft);
+}
+
+.notification-item.is-unread {
+  background: color-mix(in srgb, var(--primary-soft) 70%, transparent);
+}
+
+.notification-item-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.notification-item-title {
+  font-weight: 700;
+  font-size: .92rem;
+}
+
+.notification-item-body {
+  color: var(--muted, #6c757d);
+  font-size: .82rem;
+  margin-top: .15rem;
+}
+
+.notification-item-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-top: .35rem;
+  font-size: .75rem;
+  color: var(--muted, #6c757d);
+}
+
+.notification-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text);
+  border-color: var(--border) !important;
+}
+
+.notification-row.is-unread {
+  background: var(--primary-soft);
+}
+
+.notification-row-link {
+  display: flex;
+  gap: .85rem;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+}
+
+.notification-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+@media (max-width: 575.98px) {
+  .notification-row {
+    flex-direction: column;
+  }
+
+  .notification-actions {
+    width: 100%;
+  }
+}
