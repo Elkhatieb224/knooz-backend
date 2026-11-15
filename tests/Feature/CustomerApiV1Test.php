@@ -172,6 +172,35 @@ class CustomerApiV1Test extends TestCase
         $this->getJson('/api/v1/auth/me')->assertStatus(401);
     }
 
+    public function test_otp_stub_accepts_any_code_and_resets_password(): void
+    {
+        $this->makeCustomer('otp@test.com', '0555555001');
+
+        $this->postJson('/api/v1/auth/forgot-password', [
+            'login' => '0555555001',
+        ])->assertOk()->assertJsonPath('data.sent', true);
+
+        $verify = $this->postJson('/api/v1/auth/verify-otp', [
+            'login' => '0555555001',
+            'otp' => '000000',
+        ])->assertOk();
+
+        $resetToken = $verify->json('data.reset_token');
+        $this->assertNotEmpty($resetToken);
+
+        $this->postJson('/api/v1/auth/reset-password', [
+            'login' => '0555555001',
+            'reset_token' => $resetToken,
+            'password' => 'newpass123',
+            'password_confirmation' => 'newpass123',
+        ])->assertOk();
+
+        $this->postJson('/api/v1/auth/login', [
+            'login' => '555555001',
+            'password' => 'newpass123',
+        ])->assertOk()->assertJsonPath('success', true);
+    }
+
     protected function makeCustomer(string $email, string $phone): User
     {
         return User::query()->create([

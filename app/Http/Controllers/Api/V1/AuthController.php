@@ -23,10 +23,17 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'gender' => ['nullable', 'string', 'max:16'],
             'email' => ['required', 'email', 'max:190', 'unique:users,email'],
-            'phone' => ['required', 'string', 'max:30', 'unique:users,phone'],
+            'phone' => ['required', 'string', 'max:30'],
             'city' => ['nullable', 'string', 'max:120'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
+
+        $data['phone'] = $this->auth->normalizePhone($data['phone']);
+        if ($this->auth->findCustomerByLogin($data['phone'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'phone' => ['رقم الجوال مستخدم مسبقاً.'],
+            ]);
+        }
 
         $result = $this->auth->register($data);
 
@@ -103,10 +110,41 @@ class AuthController extends Controller
         ]);
 
         // OTP provider integration point — do not leak whether account exists.
+        // FCM/SMS are not required for this stub path.
         return ApiResponse::success([
             'sent' => true,
             'channel' => 'sms',
             'expires_in' => 300,
+            'dev_accepts_any_otp' => true,
         ], 'إن وُجد الحساب سيتم إرسال رمز التحقق.');
+    }
+
+    public function verifyOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'login' => ['required', 'string'],
+            'otp' => ['required', 'string', 'max:32'],
+        ]);
+
+        $result = $this->auth->verifyOtpStub($data['login'], $data['otp']);
+
+        return ApiResponse::success($result, 'تم التحقق من الرمز.');
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'login' => ['required', 'string'],
+            'reset_token' => ['required', 'string'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $this->auth->resetPasswordWithToken(
+            $data['login'],
+            $data['reset_token'],
+            $data['password'],
+        );
+
+        return ApiResponse::success(null, 'تم تحديث كلمة المرور. سجّل الدخول مجدداً.');
     }
 }
