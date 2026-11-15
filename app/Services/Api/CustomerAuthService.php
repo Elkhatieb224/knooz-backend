@@ -102,6 +102,19 @@ class CustomerAuthService
         return $user->fresh('wallet');
     }
 
+    public function updateAvatar(User $user, \Illuminate\Http\UploadedFile $file): User
+    {
+        $path = $file->store('avatars/'.$user->id, 'public');
+
+        if (filled($user->avatar)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+        }
+
+        $user->forceFill(['avatar' => $path])->save();
+
+        return $user->fresh('wallet');
+    }
+
     public function changePassword(User $user, string $current, string $new): void
     {
         if (! Hash::check($current, $user->password)) {

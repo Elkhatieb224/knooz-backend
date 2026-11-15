@@ -13,5 +13,6 @@ Route::middleware('customer.api')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::put('auth/profile', [AuthController::class, 'updateProfile']);
+    Route::post('auth/avatar', [AuthController::class, 'uploadAvatar']);
     Route::post('auth/change-password', [AuthController::class, 'changePassword']);
 });

@@ -91,6 +91,17 @@ class AuthController extends Controller
         return ApiResponse::success(new UserResource($user), 'تم تحديث الملف الشخصي.');
     }
 
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'avatar' => ['required', 'image', 'max:4096'],
+        ]);
+
+        $user = $this->auth->updateAvatar($request->user(), $data['avatar']);
+
+        return ApiResponse::success(new UserResource($user), 'تم تحديث صورة الملف الشخصي.');
+    }
+
     public function changePassword(Request $request): JsonResponse
     {
         $data = $request->validate([
