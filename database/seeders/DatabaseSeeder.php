@@ -639,13 +639,18 @@ class DatabaseSeeder extends Seeder
             ['name_ar' => 'زيت موبيل 5W-30', 'slug' => 'mobil-5w30', 'category' => 'oils', 'brand' => 'Mobil', 'size' => '4L', 'price' => 145],
             ['name_ar' => 'زيت كاسترول 5W-40', 'slug' => 'castrol-5w40', 'category' => 'oils', 'brand' => 'Castrol', 'size' => '4L', 'price' => 160],
         ] as $product) {
-            \App\Models\ShopProduct::query()->create([
-                ...$product,
-                'stock' => 25,
-                'is_active' => true,
-                'description' => $product['name_ar'],
-            ]);
+            \App\Models\ShopProduct::query()->updateOrCreate(
+                ['slug' => $product['slug']],
+                [
+                    ...$product,
+                    'stock' => 25,
+                    'is_active' => true,
+                    'description' => $product['name_ar'],
+                ]
+            );
         }
+
+        $this->call(ShopTestProductsSeeder::class);
 
         // Seed notifications for sample customers if present.
         $customers = User::query()

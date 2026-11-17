@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\OfferController;
+use App\Http\Controllers\Admin\ShopProductController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RequestHubController;
@@ -59,6 +60,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
 
         Route::resource('offers', OfferController::class);
+
+        Route::resource('shop-products', ShopProductController::class);
+        Route::post('shop-products/{shop_product}/toggle', [ShopProductController::class, 'toggleStatus'])
+            ->name('shop-products.toggle');
 
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('settings/general', [SettingController::class, 'updateGeneral'])->name('settings.general');
