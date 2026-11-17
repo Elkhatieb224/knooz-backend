@@ -96,6 +96,12 @@ class DatabaseNotification extends BaseDatabaseNotification
             $openUrl = route($panel.'.notifications.open', $this->id);
         }
 
+        $mobileRoute = null;
+        if ($panel === 'mobile') {
+            $mobileRoute = app(\App\Services\Notifications\MobileDestinationResolver::class)
+                ->resolve($this)['route'];
+        }
+
         return [
             'id' => $this->id,
             'title' => $this->title(),
@@ -109,8 +115,11 @@ class DatabaseNotification extends BaseDatabaseNotification
             'created_at_human' => $this->created_at?->diffForHumans(),
             'reference_type' => $this->reference_type,
             'reference_id' => $this->reference_id,
+            'route' => $mobileRoute,
             'open_url' => $openUrl,
-            'deep_link' => sprintf('knooz://%s/notifications/%s', $panel, $this->id),
+            'deep_link' => $mobileRoute
+                ? sprintf('knooz://mobile%s', $mobileRoute)
+                : sprintf('knooz://%s/notifications/%s', $panel, $this->id),
         ];
     }
 }

@@ -32,7 +32,19 @@ class NotificationHooks
                 $title,
                 $body,
                 $payment,
-                eventKey: sprintf('payment:%d:%s', $payment->id, $type->value),
+                eventKey: sprintf('payment:%d:%s:company', $payment->id, $type->value),
+                queue: false,
+            );
+        }
+
+        if ($payment->user_id && $payment->user) {
+            $this->notifications->notify(
+                $payment->user,
+                $type,
+                $title,
+                $body,
+                $payment,
+                eventKey: sprintf('payment:%d:%s:customer', $payment->id, $type->value),
                 queue: false,
             );
         }
@@ -76,6 +88,18 @@ class NotificationHooks
                 queue: false,
             );
         }
+
+        if ($booking->user_id && $booking->user) {
+            $this->notifications->notify(
+                $booking->user,
+                NotificationType::BookingStatus,
+                'تحديث حجزك',
+                "تم تحديث حالة حجزك #{$booking->id} إلى: {$status}",
+                $booking,
+                eventKey: sprintf('booking:%d:customer:%s', $booking->id, $booking->status?->value ?? 'x'),
+                queue: false,
+            );
+        }
     }
 
     public function operationUpdated(Operation $operation): void
@@ -116,6 +140,19 @@ class NotificationHooks
                 queue: false,
             );
         }
+
+        $customer = $operation->user ?? $operation->vehicle?->user;
+        if ($customer) {
+            $this->notifications->notify(
+                $customer,
+                NotificationType::OperationStatus,
+                'تحديث عملية',
+                "تم تحديث حالة العملية #{$operation->id} إلى: {$status}",
+                $operation,
+                eventKey: sprintf('operation:%d:customer:%s', $operation->id, $operation->status?->value ?? 'x'),
+                queue: false,
+            );
+        }
     }
 
     public function complaintUpdated(Complaint $complaint): void
@@ -129,19 +166,49 @@ class NotificationHooks
             eventKey: sprintf('complaint:%d:status:%s', $complaint->id, $complaint->status?->value ?? 'x'),
             queue: false,
         );
+
+        if ($complaint->user_id && $complaint->user) {
+            $status = $complaint->status?->label() ?? (string) $complaint->status;
+            $this->notifications->notify(
+                $complaint->user,
+                NotificationType::ComplaintStatus,
+                'تحديث شكواك',
+                "تم تحديث شكواك «{$complaint->subject}» إلى: {$status}",
+                $complaint,
+                eventKey: sprintf('complaint:%d:customer:%s', $complaint->id, $complaint->status?->value ?? 'x'),
+                queue: false,
+            );
+        }
     }
 
     public function emergencyUpdated(EmergencyRequest $emergency): void
     {
+        $status = $emergency->status?->label() ?? (string) $emergency->status;
+        $isHome = str_starts_with((string) $emergency->notes, 'home:');
+        $adminTitle = $isHome ? 'تحديث طلب خدمة منزلية' : 'تحديث طلب طوارئ';
+        $customerTitle = $isHome ? 'تحديث طلبك المنزلي' : 'تحديث طلب الطوارئ';
+
         $this->notifications->notify(
             $this->notifications->activeAdmins('bookings.view'),
             NotificationType::EmergencyStatus,
-            'تحديث طلب طوارئ',
-            "تم تحديث طلب الطوارئ #{$emergency->id}",
+            $adminTitle,
+            "تم تحديث الطلب #{$emergency->id} إلى: {$status}",
             $emergency,
             eventKey: sprintf('emergency:%d:status:%s', $emergency->id, $emergency->status?->value ?? 'x'),
             queue: false,
         );
+
+        if ($emergency->user_id && $emergency->user) {
+            $this->notifications->notify(
+                $emergency->user,
+                NotificationType::EmergencyStatus,
+                $customerTitle,
+                "تم تحديث طلبك #{$emergency->id} إلى: {$status}",
+                $emergency,
+                eventKey: sprintf('emergency:%d:customer:%s', $emergency->id, $emergency->status?->value ?? 'x'),
+                queue: false,
+            );
+        }
     }
 
     public function companyCreated(Company $company): void

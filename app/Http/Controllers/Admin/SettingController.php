@@ -8,9 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Package;
 use App\Models\Service;
 use App\Models\Setting;
+use App\Support\ServiceChannels;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
@@ -32,9 +35,12 @@ class SettingController extends Controller
 
         return view('admin.settings.index', [
             'settings' => $settings,
-            'services' => Service::query()->orderBy('name_ar')->get(),
+            'services' => Service::query()->orderBy('sort_order')->orderBy('name_ar')->get(),
             'packages' => Package::query()->latest()->paginate(10, ['*'], 'packages_page'),
             'packageTypes' => PackageType::labels(),
+            'serviceChannels' => ServiceChannels::labels(),
+            'serviceRequirements' => ServiceChannels::requirementLabels(),
+            'serviceFlows' => ServiceChannels::flowHints(),
         ]);
     }
 
@@ -60,13 +66,80 @@ class SettingController extends Controller
         return back()->with('success', 'تم حفظ الإعدادات العامة.');
     }
 
+    public function storeService(Request $request): RedirectResponse
+    {
+        $this->authorize('settings.manage');
+
+        $data = $this->validateService($request);
+        $data['slug'] = $data['slug'] ?: Str::slug($data['name_en'] ?: $data['name_ar']);
+        $data['is_active'] = $request->boolean('is_active', true);
+        $data['requires'] = array_values($request->input('requires', []));
+        $data['sort_order'] = (int) ($data['sort_order'] ?? 100);
+
+        Service::query()->create($data);
+        $this->forgetServicesCache();
+
+        return back()->with('success', 'تم إضافة الخدمة.');
+    }
+
+    public function updateService(Request $request, Service $service): RedirectResponse
+    {
+        $this->authorize('settings.manage');
+
+        $data = $this->validateService($request, $service);
+        $data['is_active'] = $request->boolean('is_active');
+        $data['requires'] = array_values($request->input('requires', []));
+        $data['sort_order'] = (int) ($data['sort_order'] ?? $service->sort_order ?? 100);
+
+        $service->update($data);
+        $this->forgetServicesCache();
+
+        return back()->with('success', 'تم تحديث الخدمة.');
+    }
+
     public function toggleService(Service $service): RedirectResponse
     {
         $this->authorize('settings.manage');
 
         $service->update(['is_active' => ! $service->is_active]);
+        $this->forgetServicesCache();
 
         return back()->with('success', 'تم تحديث حالة الخدمة.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validateService(Request $request, ?Service $service = null): array
+    {
+        return $request->validate([
+            'name_ar' => ['required', 'string', 'max:120'],
+            'name_en' => ['nullable', 'string', 'max:120'],
+            'slug' => [
+                'nullable',
+                'string',
+                'max:120',
+                Rule::unique('services', 'slug')->ignore($service?->id),
+            ],
+            'icon' => ['nullable', 'string', 'max:40'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'base_price' => ['nullable', 'numeric', 'min:0'],
+            'channel' => ['required', Rule::in(array_keys(ServiceChannels::labels()))],
+            'kind_key' => ['nullable', 'string', 'max:40'],
+            'flow_hint' => ['nullable', Rule::in(array_keys(ServiceChannels::flowHints()))],
+            'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'requires' => ['nullable', 'array'],
+            'requires.*' => ['string', Rule::in(array_keys(ServiceChannels::requirementLabels()))],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+    }
+
+    protected function forgetServicesCache(): void
+    {
+        Cache::forget('api:v1:services');
+        foreach (array_keys(ServiceChannels::labels()) as $channel) {
+            Cache::forget('api:v1:services:'.$channel);
+        }
     }
 
     public function storePackage(Request $request): RedirectResponse

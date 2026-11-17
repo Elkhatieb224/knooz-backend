@@ -89,7 +89,96 @@ class CustomerBookingService
             );
         }
 
+        $this->notifications->notify(
+            $user,
+            NotificationType::BookingNew,
+            'تم استلام حجزك',
+            "تم تسجيل حجزك #{$booking->id} — {$service->name_ar}. سنتواصل معك قريباً.",
+            $booking,
+            eventKey: sprintf('booking:%d:customer-created', $booking->id),
+            queue: false,
+        );
+
         return $booking->load(['vehicle', 'center', 'service']);
+    }
+
+    /**
+     * Customer may edit only new (upcoming) bookings.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function update(User $user, Booking $booking, array $data): Booking
+    {
+        if ((int) $booking->user_id !== (int) $user->id) {
+            abort(404);
+        }
+
+        if ($booking->status !== BookingStatus::New) {
+            throw ValidationException::withMessages([
+                'status' => ['يمكن تعديل الحجوزات الجديدة فقط.'],
+            ]);
+        }
+
+        $payload = [];
+
+        if (array_key_exists('notes', $data)) {
+            $payload['notes'] = $data['notes'];
+        }
+
+        if (! empty($data['scheduled_at'])) {
+            $scheduledAt = Carbon::parse($data['scheduled_at']);
+            if ($scheduledAt->lt(now())) {
+                throw ValidationException::withMessages([
+                    'scheduled_at' => ['لا يمكن حجز موعد في الماضي.'],
+                ]);
+            }
+            $payload['scheduled_at'] = $scheduledAt;
+        }
+
+        if (! empty($data['vehicle_id'])) {
+            $vehicle = Vehicle::query()
+                ->whereKey($data['vehicle_id'])
+                ->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                    if ($user->company_id) {
+                        $q->orWhere('company_id', $user->company_id);
+                    }
+                })
+                ->where('status', VehicleStatus::Active)
+                ->firstOrFail();
+            $payload['vehicle_id'] = $vehicle->id;
+        }
+
+        if (! empty($data['center_id'])) {
+            $center = Center::query()
+                ->whereKey($data['center_id'])
+                ->where('status', CenterStatus::Active)
+                ->firstOrFail();
+            $payload['center_id'] = $center->id;
+        }
+
+        if (! empty($data['service_id'])) {
+            $service = Service::query()
+                ->whereKey($data['service_id'])
+                ->where('is_active', true)
+                ->firstOrFail();
+            $payload['service_id'] = $service->id;
+            if (! array_key_exists('price', $data)) {
+                $payload['price'] = $service->base_price;
+            }
+        }
+
+        if (array_key_exists('price', $data) && $data['price'] !== null) {
+            $payload['price'] = $data['price'];
+        }
+
+        if ($payload === []) {
+            return $booking->load(['vehicle', 'center', 'service', 'operation']);
+        }
+
+        $booking->update($payload);
+
+        return $booking->fresh(['vehicle', 'center', 'service', 'operation']);
     }
 
     public function cancel(User $user, Booking $booking): Booking
@@ -105,6 +194,38 @@ class CustomerBookingService
         }
 
         $booking->update(['status' => BookingStatus::Cancelled]);
+
+        $this->notifications->notify(
+            $this->notifications->activeAdmins('bookings.view'),
+            NotificationType::BookingStatus,
+            'إلغاء حجز',
+            "ألغى العميل الحجز #{$booking->id}",
+            $booking,
+            eventKey: sprintf('booking:%d:cancelled:admin', $booking->id),
+            queue: false,
+        );
+
+        if ($booking->center_id) {
+            $this->notifications->notify(
+                $this->notifications->centerUsers((int) $booking->center_id),
+                NotificationType::BookingStatus,
+                'إلغاء حجز',
+                "أُلغي الحجز #{$booking->id}",
+                $booking,
+                eventKey: sprintf('booking:%d:cancelled:center', $booking->id),
+                queue: false,
+            );
+        }
+
+        $this->notifications->notify(
+            $user,
+            NotificationType::BookingStatus,
+            'تم إلغاء حجزك',
+            "تم إلغاء الحجز #{$booking->id} بنجاح.",
+            $booking,
+            eventKey: sprintf('booking:%d:cancelled:customer', $booking->id),
+            queue: false,
+        );
 
         return $booking->fresh(['vehicle', 'center', 'service']);
     }

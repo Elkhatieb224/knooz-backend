@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\BookingStatus;
 use App\Enums\CenterStatus;
 use App\Enums\CenterType;
+use App\Enums\NotificationType;
 use App\Enums\Theme;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
@@ -12,6 +13,7 @@ use App\Enums\VehicleStatus;
 use App\Models\AdminUser;
 use App\Models\Booking;
 use App\Models\Center;
+use App\Models\DatabaseNotification;
 use App\Models\Service;
 use App\Models\ShopProduct;
 use App\Models\User;
@@ -124,8 +126,17 @@ class CustomerApiV1Test extends TestCase
         $otherToken = $other->createToken('mobile')->plainTextToken;
         $this->withToken($otherToken)->getJson('/api/v1/bookings/'.$bookingId)->assertNotFound();
 
+        $this->withToken($token)->putJson('/api/v1/bookings/'.$bookingId, [
+            'notes' => 'ملاحظة محدثة',
+            'scheduled_at' => now()->addDays(2)->toIso8601String(),
+        ])->assertOk()->assertJsonPath('data.notes', 'ملاحظة محدثة');
+
         $this->withToken($token)->postJson('/api/v1/bookings/'.$bookingId.'/cancel')->assertOk()
             ->assertJsonPath('data.status', BookingStatus::Cancelled->value);
+
+        $this->withToken($token)->putJson('/api/v1/bookings/'.$bookingId, [
+            'notes' => 'بعد الإلغاء',
+        ])->assertStatus(422);
     }
 
     public function test_wallet_recharge_and_home_and_shop(): void
@@ -165,6 +176,73 @@ class CustomerApiV1Test extends TestCase
             'address' => 'الرياض',
             'payload' => ['service' => 'patch'],
         ])->assertCreated()->assertJsonPath('success', true);
+    }
+
+    public function test_home_visit_request_create_at_chosen_place(): void
+    {
+        $user = $this->makeCustomer('homevisit@test.com', '0554444002');
+        $token = $user->createToken('mobile')->plainTextToken;
+
+        $this->withToken($token)->postJson('/api/v1/home-visits', [
+            'kind' => 'wash',
+            'lat' => 24.7136,
+            'lng' => 46.6753,
+            'address' => 'حي النرجس، الرياض',
+            'payload' => [
+                'service_name' => 'غسيل منزلي',
+                'package_id' => 1,
+            ],
+        ])->assertCreated()->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('service_request_metas', [
+            'request_kind' => 'home_wash',
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_type' => $user->getMorphClass(),
+            'notifiable_id' => $user->id,
+            'notification_type' => NotificationType::EmergencyNew->value,
+        ]);
+    }
+
+    public function test_customer_receives_booking_notification_and_open_routes(): void
+    {
+        $user = $this->makeCustomer('notif-cust@test.com', '0554444003');
+        $center = $this->makeCenter();
+        $service = $this->makeService();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'plate_number' => 'N-11',
+            'brand' => 'Kia',
+            'model' => 'K5',
+            'status' => VehicleStatus::Active,
+            'qr_code' => 'QR-N11',
+            'nfc_code' => 'NFC-N11',
+        ]);
+
+        $token = $user->createToken('mobile')->plainTextToken;
+        $this->withToken($token)->postJson('/api/v1/bookings', [
+            'vehicle_id' => $vehicle->id,
+            'center_id' => $center->id,
+            'service_id' => $service->id,
+            'scheduled_at' => now()->addDay()->toIso8601String(),
+        ])->assertCreated();
+
+        $list = $this->withToken($token)->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $items = $list->json('data.items');
+        $this->assertNotEmpty($items);
+        $this->assertSame('/app/bookings', $items[0]['route']);
+
+        $notificationId = $items[0]['id'];
+        $this->withToken($token)->getJson('/api/v1/notifications/'.$notificationId.'/open')
+            ->assertOk()
+            ->assertJsonPath('data.route', '/app/bookings')
+            ->assertJsonPath('data.notification_type', NotificationType::BookingNew->value);
+
+        $this->assertNotNull(DatabaseNotification::query()->find($notificationId)?->read_at);
     }
 
     public function test_sanctum_middleware_rejects_missing_token(): void

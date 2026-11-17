@@ -60,6 +60,16 @@ class CustomerWalletService
                 queue: false,
             );
 
+            $this->notifications->notify(
+                $user,
+                NotificationType::PaymentPending,
+                'طلب شحن قيد المراجعة',
+                "استلمنا طلب شحن محفظتك بمبلغ {$payment->amount}. سيتم مراجعته قريباً.",
+                $payment,
+                eventKey: sprintf('payment:%d:customer-created', $payment->id),
+                queue: false,
+            );
+
             return $payment->fresh(['wallet']);
         });
     }

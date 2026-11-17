@@ -66,6 +66,22 @@ class BookingController extends Controller
         return ApiResponse::success($booking->load(['vehicle', 'center', 'service', 'operation']));
     }
 
+    public function update(Request $request, Booking $booking): JsonResponse
+    {
+        $data = $request->validate([
+            'vehicle_id' => ['sometimes', 'integer', 'exists:vehicles,id'],
+            'center_id' => ['sometimes', 'integer', 'exists:centers,id'],
+            'service_id' => ['sometimes', 'integer', 'exists:services,id'],
+            'scheduled_at' => ['sometimes', 'date'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $booking = $this->bookings->update($request->user(), $booking, $data);
+
+        return ApiResponse::success($booking, 'تم تحديث تفاصيل الحجز.');
+    }
+
     public function cancel(Request $request, Booking $booking): JsonResponse
     {
         $booking = $this->bookings->cancel($request->user(), $booking);

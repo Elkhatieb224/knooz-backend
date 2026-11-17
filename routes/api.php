@@ -24,9 +24,11 @@ Route::prefix('v1')->middleware('throttle:120,1')->group(function () {
     require __DIR__.'/api/v1/bookings.php';
     require __DIR__.'/api/v1/wallet.php';
     require __DIR__.'/api/v1/emergency.php';
+    require __DIR__.'/api/v1/home_visits.php';
     require __DIR__.'/api/v1/shop.php';
     require __DIR__.'/api/v1/notifications.php';
 });
+
 
 Route::prefix('center/v1')->middleware('throttle:120,1')->group(function () {
     require __DIR__.'/api/center/v1.php';

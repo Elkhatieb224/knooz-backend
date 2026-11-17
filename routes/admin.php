@@ -67,6 +67,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('settings/general', [SettingController::class, 'updateGeneral'])->name('settings.general');
+        Route::post('settings/services', [SettingController::class, 'storeService'])->name('settings.services.store');
+        Route::put('settings/services/{service}', [SettingController::class, 'updateService'])->name('settings.services.update');
         Route::post('settings/services/{service}/toggle', [SettingController::class, 'toggleService'])->name('settings.services.toggle');
         Route::post('settings/packages', [SettingController::class, 'storePackage'])->name('settings.packages.store');
         Route::put('settings/packages/{package}', [SettingController::class, 'updatePackage'])->name('settings.packages.update');

@@ -15,13 +15,21 @@ use Illuminate\Support\Facades\Cache;
 
 class CatalogController extends Controller
 {
-    public function services(): JsonResponse
+    public function services(Request $request): JsonResponse
     {
-        $services = Cache::remember('api:v1:services', 60, function () {
+        $channel = $request->string('channel')->toString();
+        $cacheKey = 'api:v1:services'.($channel !== '' ? ':'.$channel : '');
+
+        $services = Cache::remember($cacheKey, 60, function () use ($channel) {
             return Service::query()
                 ->where('is_active', true)
+                ->when($channel !== '', fn ($q) => $q->where('channel', $channel))
+                ->orderBy('sort_order')
                 ->orderBy('name_ar')
-                ->get(['id', 'name_ar', 'name_en', 'slug', 'icon', 'description', 'base_price']);
+                ->get([
+                    'id', 'name_ar', 'name_en', 'slug', 'icon', 'description', 'base_price',
+                    'channel', 'kind_key', 'requires', 'flow_hint', 'sort_order',
+                ]);
         });
 
         return ApiResponse::success($services);

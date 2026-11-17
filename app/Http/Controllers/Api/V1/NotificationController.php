@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ApiResponse;
 use App\Models\DatabaseNotification;
 use App\Models\DeviceToken;
+use App\Services\Notifications\MobileDestinationResolver;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,11 +75,13 @@ class NotificationController extends Controller
         Request $request,
         string $id,
         NotificationService $notifications,
+        MobileDestinationResolver $destinations,
     ): JsonResponse {
         $notification = $request->user()->notifications()->active()->whereKey($id)->firstOrFail();
         $notifications->markRead($notification);
 
-        // Mobile destinations fall back to payload (Flutter deep links).
+        $destination = $destinations->resolve($notification);
+
         return ApiResponse::success([
             'notification_id' => $notification->id,
             'notification_type' => $notification->businessType()?->value,
@@ -86,7 +89,9 @@ class NotificationController extends Controller
             'reference_id' => $notification->reference_id,
             'title' => $notification->title(),
             'body' => $notification->body(),
-            'deep_link' => sprintf('knooz://mobile/notifications/%s', $notification->id),
+            'route' => $destination['route'],
+            'route_label' => $destination['label'],
+            'deep_link' => sprintf('knooz://mobile%s', $destination['route']),
             'unread_count' => $notifications->unreadCount($request->user()),
         ]);
     }

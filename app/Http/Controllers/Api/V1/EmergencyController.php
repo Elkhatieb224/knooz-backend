@@ -7,11 +7,13 @@ use App\Enums\NotificationType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ApiResponse;
 use App\Models\EmergencyRequest;
+use App\Models\Service;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class EmergencyController extends Controller
 {
@@ -36,23 +38,80 @@ class EmergencyController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $allowedKinds = Service::query()
+            ->where('is_active', true)
+            ->where('channel', 'emergency')
+            ->whereNotNull('kind_key')
+            ->pluck('kind_key')
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($allowedKinds === []) {
+            $allowedKinds = ['tire', 'fuel', 'tow', 'battery', 'lockout'];
+        }
+
         $data = $request->validate([
-            'kind' => ['required', Rule::in(['tire', 'fuel', 'tow'])],
+            'kind' => ['required', Rule::in($allowedKinds)],
+            'service_id' => ['nullable', 'integer', 'exists:services,id'],
             'vehicle_id' => ['nullable', 'integer', 'exists:vehicles,id'],
             'lat' => ['required', 'numeric'],
             'lng' => ['required', 'numeric'],
-            'address' => ['nullable', 'string', 'max:255'],
+            'address' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payload' => ['nullable', 'array'],
+            'destination' => ['nullable', 'array'],
+            'destination.lat' => ['nullable', 'numeric'],
+            'destination.lng' => ['nullable', 'numeric'],
+            'destination.address' => ['nullable', 'string', 'max:255'],
+            'plate' => ['nullable', 'string', 'max:32'],
         ]);
 
-        $emergency = DB::transaction(function () use ($request, $data) {
+        $service = null;
+        if (! empty($data['service_id'])) {
+            $service = Service::query()
+                ->whereKey($data['service_id'])
+                ->where('is_active', true)
+                ->where('channel', 'emergency')
+                ->first();
+        }
+        if ($service === null) {
+            $service = Service::query()
+                ->where('is_active', true)
+                ->where('channel', 'emergency')
+                ->where('kind_key', $data['kind'])
+                ->orderBy('sort_order')
+                ->first();
+        }
+
+        $requires = $service?->requiredFields() ?? ['location'];
+        $this->assertRequirements($requires, $data);
+
+        $payload = array_merge($data['payload'] ?? [], [
+            'channel' => 'emergency',
+            'service_id' => $service?->id,
+            'service_name' => $service?->name_ar,
+            'kind_key' => $data['kind'],
+            'place' => [
+                'lat' => (float) $data['lat'],
+                'lng' => (float) $data['lng'],
+                'address' => $data['address'],
+            ],
+        ]);
+        if (! empty($data['destination'])) {
+            $payload['destination'] = $data['destination'];
+        }
+        if (! empty($data['plate'])) {
+            $payload['plate'] = $data['plate'];
+        }
+
+        $emergency = DB::transaction(function () use ($request, $data, $payload) {
             $emergency = EmergencyRequest::query()->create([
                 'user_id' => $request->user()->id,
                 'vehicle_id' => $data['vehicle_id'] ?? null,
                 'lat' => $data['lat'],
                 'lng' => $data['lng'],
-                'address' => $data['address'] ?? null,
+                'address' => $data['address'],
                 'status' => EmergencyRequestStatus::New,
                 'notes' => trim(($data['kind'] ?? '').' | '.($data['notes'] ?? '')),
             ]);
@@ -61,7 +120,7 @@ class EmergencyController extends Controller
                 'emergency_request_id' => $emergency->id,
                 'booking_id' => null,
                 'request_kind' => $data['kind'],
-                'payload' => json_encode($data['payload'] ?? [], JSON_UNESCAPED_UNICODE),
+                'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -69,17 +128,56 @@ class EmergencyController extends Controller
             return $emergency;
         });
 
+        $kindLabel = $service?->name_ar ?? $data['kind'];
+
         $this->notifications->notify(
             $this->notifications->activeAdmins('bookings.view'),
             NotificationType::EmergencyNew,
             'طلب طوارئ جديد',
-            'نوع: '.$data['kind'].' — '.$request->user()->name,
+            'نوع: '.$kindLabel.' — '.$request->user()->name.' — '.$data['address'],
             $emergency,
             eventKey: sprintf('emergency:%d:created', $emergency->id),
             queue: false,
         );
 
+        $this->notifications->notify(
+            $request->user(),
+            NotificationType::EmergencyNew,
+            'تم استلام طلب الطوارئ',
+            'استلمنا طلب «'.$kindLabel.'» وسنصل إليك في موقعك.',
+            $emergency,
+            eventKey: sprintf('emergency:%d:customer-created', $emergency->id),
+            queue: false,
+        );
+
         return ApiResponse::success($emergency->load('vehicle'), 'تم إرسال طلب الطوارئ.', 201);
+    }
+
+    /**
+     * @param  list<string>  $requires
+     * @param  array<string, mixed>  $data
+     */
+    protected function assertRequirements(array $requires, array $data): void
+    {
+        $errors = [];
+        if (in_array('vehicle', $requires, true) && empty($data['vehicle_id'])) {
+            $errors['vehicle_id'] = ['هذه الخدمة تتطلب اختيار مركبة.'];
+        }
+        if (in_array('plate', $requires, true) && empty($data['plate'])) {
+            $errors['plate'] = ['هذه الخدمة تتطلب رقم اللوحة.'];
+        }
+        if (in_array('notes', $requires, true) && empty($data['notes'])) {
+            // soft: notes optional in practice unless explicitly strict — keep optional for UX
+        }
+        if (in_array('destination', $requires, true)) {
+            $dest = $data['destination'] ?? null;
+            if (! is_array($dest) || empty($dest['lat']) || empty($dest['lng'])) {
+                $errors['destination'] = ['هذه الخدمة تتطلب تحديد وجهة النقل.'];
+            }
+        }
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     public function show(Request $request, EmergencyRequest $emergency): JsonResponse
