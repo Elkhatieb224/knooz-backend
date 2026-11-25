@@ -123,7 +123,7 @@ class CenterApiBookingOperationTest extends TestCase
             'show_revenue' => true,
         ]);
 
-        $manager = CenterUser::query()->create([
+        $manager = CenterUser::query()->forceCreate([
             'center_id' => $center->id,
             'name' => 'Manager',
             'email' => 'ops@center.test',
@@ -147,7 +147,7 @@ class CenterApiBookingOperationTest extends TestCase
             'is_available' => true,
         ]);
 
-        $customer = User::query()->create([
+        $customer = User::query()->forceCreate([
             'name' => 'Cust',
             'email' => 'cust-ops@test.com',
             'phone' => '0552000002',

@@ -23,6 +23,11 @@ class ServiceController extends Controller
                 'id' => $service->id,
                 'name_ar' => $service->name_ar,
                 'name_en' => $service->name_en,
+                'slug' => $service->slug,
+                'channel' => $service->channel,
+                'kind_key' => $service->kind_key,
+                'flow_hint' => $service->flow_hint,
+                'icon' => $service->icon,
                 'base_price' => (float) $service->base_price,
                 'contract_price' => $service->pivot->contract_price !== null
                     ? (float) $service->pivot->contract_price
@@ -31,6 +36,9 @@ class ServiceController extends Controller
                 // Prices are read-only for centers; app_profit not exposed to staff.
                 'app_profit' => $user->canViewRevenue() && $center->showsRevenue()
                     ? ($service->pivot->app_profit !== null ? (float) $service->pivot->app_profit : null)
+                    : null,
+                'app_profit_mode' => $user->canViewRevenue() && $center->showsRevenue()
+                    ? ($service->pivot->app_profit_mode ?: 'fixed')
                     : null,
             ]);
 

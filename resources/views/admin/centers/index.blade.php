@@ -27,18 +27,36 @@
             @endforeach
         </select>
     </div>
+    <div class="col-md-2">
+        <select name="channel" class="form-select">
+            <option value="">كل القنوات</option>
+            @foreach (($channels ?? []) as $value => $label)
+                <option value="{{ $value }}" @selected(request('channel')===$value)>{{ $label }}</option>
+            @endforeach
+        </select>
+    </div>
     <div class="col-md-2"><button class="btn btn-outline-knooz w-100">تصفية</button></div>
 </form>
 <div class="panel">
     <div class="table-responsive">
         <table class="table table-admin">
-            <thead><tr><th>الاسم</th><th>النوع</th><th>المدينة</th><th>المسؤول</th><th>الخدمات</th><th>الحالة</th><th></th></tr></thead>
+            <thead><tr><th>الاسم</th><th>النوع</th><th>المدينة</th><th>القنوات</th><th>المسؤول</th><th>الخدمات</th><th>الحالة</th><th></th></tr></thead>
             <tbody>
             @forelse ($centers as $center)
                 <tr>
                     <td class="fw-bold">{{ $center->name }}</td>
                     <td>{{ $center->type_label }}</td>
                     <td>{{ $center->city }}</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            @if ($center->offers_center_service)<span class="badge text-bg-light border">مركز</span>@endif
+                            @if ($center->offers_home_service)<span class="badge text-bg-light border">منزل</span>@endif
+                            @if ($center->offers_emergency_service)<span class="badge text-bg-light border">طوارئ</span>@endif
+                            @if (! $center->offers_center_service && ! $center->offers_home_service && ! $center->offers_emergency_service)
+                                <span class="text-muted">—</span>
+                            @endif
+                        </div>
+                    </td>
                     <td>{{ $center->managerCenterUser?->name ?: ($center->manager?->name ?: '—') }}</td>
                     <td>{{ $center->services_count }}</td>
                     <td>@include('components.admin.status-badge', ['status' => $center->status])</td>
@@ -50,7 +68,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="7">@include('components.admin.empty-state', ['message' => 'لا توجد مراكز'])</td></tr>
+                <tr><td colspan="8">@include('components.admin.empty-state', ['message' => 'لا توجد مراكز'])</td></tr>
             @endforelse
             </tbody>
         </table>

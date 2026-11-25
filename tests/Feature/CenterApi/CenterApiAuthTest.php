@@ -64,6 +64,28 @@ class CenterApiAuthTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_me_exposes_center_service_channels(): void
+    {
+        $center = $this->makeCenter();
+        $center->update([
+            'offers_center_service' => true,
+            'offers_home_service' => false,
+            'offers_emergency_service' => true,
+        ]);
+        $user = $this->makeCenterUser($center, 'channels@center.test');
+        $token = PanelApiToken::issue($user, 'center')['plain'];
+
+        $this->withToken($token)->getJson('/api/center/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.center.offers_center_service', true)
+            ->assertJsonPath('data.center.offers_home_service', false)
+            ->assertJsonPath('data.center.offers_emergency_service', true)
+            ->assertJsonPath('data.center.capabilities.branch_operations', true)
+            ->assertJsonPath('data.center.capabilities.home_visits', false)
+            ->assertJsonPath('data.center.capabilities.emergency', true)
+            ->assertJsonPath('data.center.capabilities.operations', true);
+    }
+
     public function test_me_and_logout(): void
     {
         $center = $this->makeCenter();
@@ -88,7 +110,7 @@ class CenterApiAuthTest extends TestCase
             'type' => $type,
             'status' => $status,
             'city' => 'Riyadh',
-            'show_revenue' => $type === CenterType::Owned,
+            'show_revenue' => $type === CenterType::Contracted,
         ]);
     }
 
@@ -98,7 +120,7 @@ class CenterApiAuthTest extends TestCase
         UserStatus $status = UserStatus::Active,
         CenterUserRole $role = CenterUserRole::Manager,
     ): CenterUser {
-        return CenterUser::query()->create([
+        return CenterUser::query()->forceCreate([
             'center_id' => $center->id,
             'name' => 'Center User',
             'email' => $email,

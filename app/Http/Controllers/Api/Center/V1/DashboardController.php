@@ -28,6 +28,8 @@ class DashboardController extends Controller
             'incoming_bookings' => BookingResource::collection($payload['incoming_bookings']),
             'active_operations' => OperationResource::collection($payload['active_operations']),
             'quick_actions' => $payload['quick_actions'],
+            'channels' => $payload['channels'],
+            'capabilities' => $payload['capabilities'],
         ]);
     }
 }

@@ -105,7 +105,7 @@ class CompanyApiV1Test extends TestCase
             'city' => 'Riyadh',
             'show_revenue' => true,
         ]);
-        $centerUser = \App\Models\CenterUser::query()->create([
+        $centerUser = \App\Models\CenterUser::query()->forceCreate([
             'center_id' => $center->id,
             'name' => 'CU',
             'email' => 'cu@center.test',
@@ -240,7 +240,7 @@ class CompanyApiV1Test extends TestCase
         UserStatus $status = UserStatus::Active,
         CompanyUserRole $role = CompanyUserRole::Owner,
     ): CompanyUser {
-        return CompanyUser::query()->create([
+        return CompanyUser::query()->forceCreate([
             'company_id' => $company->id,
             'name' => 'Company User',
             'email' => $email,
@@ -253,7 +253,7 @@ class CompanyApiV1Test extends TestCase
 
     protected function makeCustomer(string $email, string $phone): User
     {
-        return User::query()->create([
+        return User::query()->forceCreate([
             'name' => 'Owner '.$email,
             'email' => $email,
             'phone' => $phone,
@@ -286,7 +286,7 @@ class CompanyApiV1Test extends TestCase
             'show_revenue' => true,
         ]);
         $service = Service::query()->firstOrCreate(['slug' => 'wash-co'], [
-            'name_ar' => 'غسيل',
+            'name_ar' => '????',
             'name_en' => 'Wash',
             'base_price' => 50,
             'is_active' => true,

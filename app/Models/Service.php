@@ -65,7 +65,7 @@ class Service extends Model
     public function centers(): BelongsToMany
     {
         return $this->belongsToMany(Center::class, 'center_service')
-            ->withPivot(['contract_price', 'app_profit', 'is_available'])
+            ->withPivot(['contract_price', 'app_profit', 'app_profit_mode', 'is_available'])
             ->withTimestamps();
     }
 

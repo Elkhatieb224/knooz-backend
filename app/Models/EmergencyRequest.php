@@ -14,6 +14,7 @@ class EmergencyRequest extends Model
     protected $fillable = [
         'user_id',
         'vehicle_id',
+        'center_id',
         'lat',
         'lng',
         'address',
@@ -52,5 +53,10 @@ class EmergencyRequest extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'employee_id');
+    }
+
+    public function center(): BelongsTo
+    {
+        return $this->belongsTo(Center::class);
     }
 }

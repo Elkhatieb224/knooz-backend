@@ -38,18 +38,26 @@ class User extends Authenticatable
         'phone',
         'city',
         'password',
-        'role',
-        'status',
         'theme',
         'avatar',
-        'loyalty_points',
         'notifications_enabled',
-        'company_id',
-        'center_id',
         'qr_code',
         'nfc_code',
         'last_login_at',
         'email_verified_at',
+    ];
+
+    /**
+     * Privileged attributes that must be set via forceFill / forceCreate.
+     *
+     * @var list<string>
+     */
+    public const PRIVILEGED_ATTRIBUTES = [
+        'role',
+        'status',
+        'company_id',
+        'center_id',
+        'loyalty_points',
     ];
 
     /**

@@ -7,7 +7,10 @@ use App\Enums\NotificationType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ApiResponse;
 use App\Models\EmergencyRequest;
+use App\Models\Service;
+use App\Services\Centers\CenterDispatchService;
 use App\Services\Notifications\NotificationService;
+use App\Support\ServiceChannels;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,14 +24,17 @@ class HomeVisitController extends Controller
 {
     public const KINDS = ['wash', 'oil', 'tires'];
 
-    public function __construct(protected NotificationService $notifications)
-    {
+    public function __construct(
+        protected NotificationService $notifications,
+        protected CenterDispatchService $dispatch,
+    ) {
     }
 
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
             'kind' => ['required', Rule::in(self::KINDS)],
+            'service_id' => ['nullable', 'integer', 'exists:services,id'],
             'vehicle_id' => ['nullable', 'integer', 'exists:vehicles,id'],
             'lat' => ['required', 'numeric'],
             'lng' => ['required', 'numeric'],
@@ -37,10 +43,35 @@ class HomeVisitController extends Controller
             'payload' => ['nullable', 'array'],
         ]);
 
-        $visit = DB::transaction(function () use ($request, $data) {
+        $service = null;
+        if (! empty($data['service_id'])) {
+            $service = Service::query()
+                ->whereKey($data['service_id'])
+                ->where('is_active', true)
+                ->where('channel', ServiceChannels::HOME)
+                ->first();
+        }
+        if ($service === null) {
+            $service = Service::query()
+                ->where('is_active', true)
+                ->where('channel', ServiceChannels::HOME)
+                ->where('kind_key', $data['kind'])
+                ->orderBy('sort_order')
+                ->first();
+        }
+
+        $assignedCenter = $this->dispatch->nearestForChannel(
+            ServiceChannels::HOME,
+            (float) $data['lat'],
+            (float) $data['lng'],
+            $service?->id,
+        );
+
+        $visit = DB::transaction(function () use ($request, $data, $service, $assignedCenter) {
             $visit = EmergencyRequest::query()->create([
                 'user_id' => $request->user()->id,
                 'vehicle_id' => $data['vehicle_id'] ?? null,
+                'center_id' => $assignedCenter?->id,
                 'lat' => $data['lat'],
                 'lng' => $data['lng'],
                 'address' => $data['address'],
@@ -49,7 +80,11 @@ class HomeVisitController extends Controller
             ]);
 
             $payload = array_merge($data['payload'] ?? [], [
-                'channel' => 'home',
+                'channel' => ServiceChannels::HOME,
+                'service_id' => $service?->id,
+                'service_name' => $service?->name_ar,
+                'kind_key' => $data['kind'],
+                'assigned_center_id' => $assignedCenter?->id,
                 'place' => [
                     'lat' => (float) $data['lat'],
                     'lng' => (float) $data['lng'],
@@ -69,7 +104,7 @@ class HomeVisitController extends Controller
             return $visit;
         });
 
-        $kindLabel = match ($data['kind']) {
+        $kindLabel = $service?->name_ar ?? match ($data['kind']) {
             'wash' => 'غسيل',
             'oil' => 'زيت',
             'tires' => 'إطارات',
@@ -86,6 +121,18 @@ class HomeVisitController extends Controller
             queue: false,
         );
 
+        if ($assignedCenter) {
+            $this->notifications->notify(
+                $this->notifications->centerUsers((int) $assignedCenter->id),
+                NotificationType::EmergencyNew,
+                'طلب خدمة منزلية لمركزكم',
+                'نوع: '.$kindLabel.' — '.$request->user()->name.' — '.$data['address'],
+                $visit,
+                eventKey: sprintf('home_visit:%d:center-assigned', $visit->id),
+                queue: false,
+            );
+        }
+
         $this->notifications->notify(
             $request->user(),
             NotificationType::EmergencyNew,
@@ -97,7 +144,7 @@ class HomeVisitController extends Controller
         );
 
         return ApiResponse::success(
-            $visit->load('vehicle'),
+            $visit->load(['vehicle', 'center']),
             'تم إرسال طلب الخدمة المنزلية. سنصل إليك في الموقع المحدد.',
             201,
         );

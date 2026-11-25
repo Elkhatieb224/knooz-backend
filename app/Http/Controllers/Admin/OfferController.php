@@ -9,6 +9,7 @@ use App\Models\Offer;
 use App\Models\Service;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class OfferController extends Controller
@@ -47,7 +48,9 @@ class OfferController extends Controller
     {
         $this->authorize('offers.manage');
 
-        Offer::query()->create($request->validated());
+        $data = $request->safe()->except(['image']);
+        $data = $this->applyImageUpload($request, $data);
+        Offer::query()->create($data);
 
         return redirect()
             ->route('admin.offers.index')
@@ -77,7 +80,9 @@ class OfferController extends Controller
     {
         $this->authorize('offers.manage');
 
-        $offer->update($request->validated());
+        $data = $request->safe()->except(['image']);
+        $data = $this->applyImageUpload($request, $data, $offer->image_path);
+        $offer->update($data);
 
         return redirect()
             ->route('admin.offers.show', $offer)
@@ -88,10 +93,34 @@ class OfferController extends Controller
     {
         $this->authorize('offers.manage');
 
+        if ($offer->image_path && Storage::disk('public')->exists($offer->image_path)) {
+            Storage::disk('public')->delete($offer->image_path);
+        }
+
         $offer->delete();
 
         return redirect()
             ->route('admin.offers.index')
             ->with('success', 'تم حذف العرض بنجاح.');
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function applyImageUpload(Request $request, array $data, ?string $existingPath = null): array
+    {
+        if (! $request->hasFile('image')) {
+            return $data;
+        }
+
+        $path = $request->file('image')->store('offers', 'public');
+        $data['image_path'] = $path;
+
+        if ($existingPath && $existingPath !== $path && Storage::disk('public')->exists($existingPath)) {
+            Storage::disk('public')->delete($existingPath);
+        }
+
+        return $data;
     }
 }

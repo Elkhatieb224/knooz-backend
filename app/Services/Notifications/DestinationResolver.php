@@ -83,18 +83,23 @@ class DestinationResolver
 
     protected function loadReference(DatabaseNotification $notification): ?Model
     {
-        if (! $notification->reference_type || ! $notification->reference_id) {
+        $type = $notification->reference_type
+            ?: (is_string($notification->data['reference_type'] ?? null) ? $notification->data['reference_type'] : null);
+        $id = $notification->reference_id
+            ?? ($notification->data['reference_id'] ?? null);
+
+        if (! $type || $id === null || $id === '') {
             return null;
         }
 
-        if (! class_exists($notification->reference_type)) {
+        if (! class_exists($type)) {
             return null;
         }
 
         /** @var class-string<Model> $class */
-        $class = $notification->reference_type;
+        $class = $type;
 
-        return $class::query()->find($notification->reference_id);
+        return $class::query()->find($id);
     }
 
     protected function canAccessReference(string $panel, Authenticatable $user, Model $reference, NotificationType $type): bool
@@ -196,19 +201,19 @@ class DestinationResolver
         }
 
         if ($reference instanceof Booking) {
-            return ['name' => 'admin.requests.index', 'params' => ['tab' => 'bookings', 'q' => $reference->id]];
+            return ['name' => 'admin.requests.index', 'params' => ['tab' => 'bookings', 'id' => $reference->id]];
         }
 
         if ($reference instanceof Operation) {
-            return ['name' => 'admin.requests.index', 'params' => ['tab' => 'operations', 'q' => $reference->id]];
+            return ['name' => 'admin.requests.index', 'params' => ['tab' => 'operations', 'id' => $reference->id]];
         }
 
         if ($reference instanceof Complaint) {
-            return ['name' => 'admin.requests.index', 'params' => ['tab' => 'complaints', 'q' => $reference->id]];
+            return ['name' => 'admin.requests.index', 'params' => ['tab' => 'complaints', 'id' => $reference->id]];
         }
 
         if ($reference instanceof EmergencyRequest) {
-            return ['name' => 'admin.requests.index', 'params' => ['tab' => 'emergency', 'q' => $reference->id]];
+            return ['name' => 'admin.requests.index', 'params' => ['tab' => 'emergency', 'id' => $reference->id]];
         }
 
         return match ($type) {

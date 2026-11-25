@@ -3,7 +3,7 @@
 @section('breadcrumb', 'تعديل مركز')
 @section('content')
 <div class="page-title">تعديل: {{ $center->name }}</div>
-<div class="panel"><div class="panel-body">
+<div class="panel" style="height:auto"><div class="panel-body">
 <form method="POST" action="{{ route('admin.centers.update', $center) }}" class="row g-3">
     @csrf @method('PUT')
     @include('admin.centers._form')

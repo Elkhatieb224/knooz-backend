@@ -1,9 +1,12 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 @section('title', 'الصلاحيات والأدوار')
 @section('breadcrumb', 'الصلاحيات والأدوار')
 @section('search_action', route('admin.roles.index'))
 @section('content')
-<div class="page-title">الصلاحيات والأدوار</div>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="page-title mb-0">الصلاحيات والأدوار</div>
+    <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">إضافة أدمن</a>
+</div>
 
 <div class="panel mb-4">
     <div class="panel-header"><strong>حسابات الإدارة</strong></div>

@@ -11,14 +11,18 @@ use App\Models\Center;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\Centers\CenterDispatchService;
 use App\Services\Notifications\NotificationService;
+use App\Support\ServiceChannels;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
 class CustomerBookingService
 {
-    public function __construct(protected NotificationService $notifications)
-    {
+    public function __construct(
+        protected NotificationService $notifications,
+        protected CenterDispatchService $dispatch,
+    ) {
     }
 
     /**
@@ -46,6 +50,19 @@ class CustomerBookingService
             ->whereKey($data['service_id'])
             ->where('is_active', true)
             ->firstOrFail();
+
+        $channel = (string) ($service->channel ?: ServiceChannels::CENTER);
+        if ($channel === ServiceChannels::SHOP) {
+            throw ValidationException::withMessages([
+                'service_id' => ['هذه الخدمة متاحة عبر المتجر وليست حجز مركز.'],
+            ]);
+        }
+
+        if (! $this->dispatch->assertCenterServes($center, $channel, (int) $service->id)) {
+            throw ValidationException::withMessages([
+                'center_id' => ['هذا المركز لا يقدّم هذه الخدمة عبر القناة المطلوبة.'],
+            ]);
+        }
 
         $scheduledAt = Carbon::parse($data['scheduled_at']);
         if ($scheduledAt->lt(now())) {

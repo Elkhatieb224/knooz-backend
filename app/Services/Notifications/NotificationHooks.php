@@ -17,13 +17,24 @@ class NotificationHooks
     {
     }
 
-    public function paymentReviewed(Payment $payment, bool $approved): void
+    public function paymentReviewed(Payment $payment, bool $approved, ?string $adminComment = null): void
     {
         $type = $approved ? NotificationType::PaymentApproved : NotificationType::PaymentRejected;
         $title = $approved ? 'تم قبول الدفعة' : 'تم رفض الدفعة';
-        $body = $approved
-            ? 'تمت الموافقة على الدفعة وإضافة الرصيد.'
-            : 'تم رفض الدفعة'.($payment->notes ? ': '.$payment->notes : '.');
+        $amount = number_format((float) $payment->amount, 2);
+        $comment = trim((string) $adminComment);
+
+        if ($approved) {
+            $body = "تمت الموافقة على دفعتك بمبلغ {$amount} وإضافة الرصيد إلى المحفظة.";
+            if ($comment !== '') {
+                $body .= "\nملاحظة الإدارة: {$comment}";
+            }
+        } else {
+            $body = "تم رفض دفعتك بمبلغ {$amount}.";
+            $body .= $comment !== ''
+                ? "\nالسبب: {$comment}"
+                : "\nيرجى التواصل مع الدعم لمزيد من التفاصيل.";
+        }
 
         if ($payment->company_id) {
             $this->notifications->notify(

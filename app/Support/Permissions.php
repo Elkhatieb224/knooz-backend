@@ -37,6 +37,7 @@ class Permissions
         'vehicles.manage' => ['super_admin', 'operations_manager'],
         'vehicles.view' => ['super_admin', 'operations_manager', 'accountant', 'support'],
         'notifications.view' => ['super_admin', 'operations_manager', 'accountant', 'support'],
+        'notifications.manage' => ['super_admin', 'operations_manager', 'support'],
     ];
 
     /**
@@ -70,6 +71,7 @@ class Permissions
             'vehicles.manage' => 'إدارة المركبات',
             'vehicles.view' => 'عرض المركبات',
             'notifications.view' => 'الإشعارات',
+            'notifications.manage' => 'إرسال إشعارات جماعية',
         ];
     }
 

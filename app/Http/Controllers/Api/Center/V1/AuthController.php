@@ -44,7 +44,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return ApiResponse::success(
-            new CenterUserResource($request->user()->load('center'))
+            new CenterUserResource($request->user()->load(['center.services']))
         );
     }
 

@@ -305,6 +305,11 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  height: auto;
+}
+
+/* Keep equal card heights only for direct column children (dashboard grids). */
+.row > [class*="col"] > .panel {
   height: 100%;
 }
 

@@ -69,7 +69,7 @@ class CenterApiIsolationTest extends TestCase
 
     protected function makeCenterUser(Center $center, string $email): CenterUser
     {
-        return CenterUser::query()->create([
+        return CenterUser::query()->forceCreate([
             'center_id' => $center->id,
             'name' => 'CU',
             'email' => $email,
@@ -82,7 +82,7 @@ class CenterApiIsolationTest extends TestCase
 
     protected function makeCustomer(): User
     {
-        return User::query()->create([
+        return User::query()->forceCreate([
             'name' => 'Customer',
             'email' => 'cust-iso@test.com',
             'phone' => '0551000001',

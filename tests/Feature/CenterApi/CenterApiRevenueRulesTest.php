@@ -26,7 +26,14 @@ class CenterApiRevenueRulesTest extends TestCase
 
     public function test_staff_cannot_see_revenue(): void
     {
-        $center = $this->makeOwnedCenter();
+        // Even when the center flag is on, staff role never sees revenue.
+        $center = Center::query()->create([
+            'name' => 'Staff Rev Gate',
+            'type' => CenterType::Contracted,
+            'status' => CenterStatus::Active,
+            'city' => 'Riyadh',
+            'show_revenue' => true,
+        ]);
         $staff = $this->makeUser($center, 'staff@center.test', CenterUserRole::Staff);
         $this->seedCompletedOperation($center, 100);
 
@@ -43,18 +50,32 @@ class CenterApiRevenueRulesTest extends TestCase
             ->assertJsonPath('data.stats.revenue_today_net', null);
     }
 
-    public function test_contracted_center_hides_revenue_by_default(): void
+    public function test_contracted_manager_sees_net_revenue_by_default(): void
     {
         $center = Center::query()->create([
             'name' => 'Contracted',
             'type' => CenterType::Contracted,
             'status' => CenterStatus::Active,
             'city' => 'Jeddah',
-            'show_revenue' => false,
+            'show_revenue' => true,
         ]);
 
         $manager = $this->makeUser($center, 'contract-mgr@center.test', CenterUserRole::Manager);
-        $this->seedCompletedOperation($center, 150);
+        $this->seedCompletedOperation($center, 100, 15);
+        $token = PanelApiToken::issue($manager, 'center')['plain'];
+
+        $this->withToken($token)->getJson('/api/center/v1/reports/summary')
+            ->assertOk()
+            ->assertJsonPath('data.can_view_revenue', true)
+            ->assertJsonPath('data.revenue_net', 85);
+    }
+
+    public function test_owned_center_hides_revenue_by_default(): void
+    {
+        $center = $this->makeOwnedCenter();
+        $manager = $this->makeUser($center, 'mgr-rev@center.test', CenterUserRole::Manager);
+        $this->seedCompletedOperation($center, 100, 15);
+
         $token = PanelApiToken::issue($manager, 'center')['plain'];
 
         $this->withToken($token)->getJson('/api/center/v1/reports/summary')
@@ -63,12 +84,17 @@ class CenterApiRevenueRulesTest extends TestCase
             ->assertJsonPath('data.revenue_net', null);
     }
 
-    public function test_owned_manager_sees_net_revenue(): void
+    public function test_owned_manager_sees_net_when_flag_enabled(): void
     {
-        $center = $this->makeOwnedCenter();
-        $manager = $this->makeUser($center, 'mgr-rev@center.test', CenterUserRole::Manager);
+        $center = Center::query()->create([
+            'name' => 'Owned With Revenue',
+            'type' => CenterType::Owned,
+            'status' => CenterStatus::Active,
+            'city' => 'Riyadh',
+            'show_revenue' => true,
+        ]);
+        $manager = $this->makeUser($center, 'owned-on@center.test', CenterUserRole::Manager);
         $this->seedCompletedOperation($center, 100, 15);
-
         $token = PanelApiToken::issue($manager, 'center')['plain'];
 
         $this->withToken($token)->getJson('/api/center/v1/reports/summary')
@@ -84,13 +110,13 @@ class CenterApiRevenueRulesTest extends TestCase
             'type' => CenterType::Owned,
             'status' => CenterStatus::Active,
             'city' => 'Riyadh',
-            'show_revenue' => true,
+            'show_revenue' => false,
         ]);
     }
 
     protected function makeUser(Center $center, string $email, CenterUserRole $role): CenterUser
     {
-        return CenterUser::query()->create([
+        return CenterUser::query()->forceCreate([
             'center_id' => $center->id,
             'name' => 'User',
             'email' => $email,
@@ -117,7 +143,7 @@ class CenterApiRevenueRulesTest extends TestCase
             'is_available' => true,
         ]);
 
-        $customer = User::query()->create([
+        $customer = User::query()->forceCreate([
             'name' => 'C',
             'email' => 'c-'.uniqid().'@test.com',
             'phone' => '05'.random_int(10000000, 99999999),

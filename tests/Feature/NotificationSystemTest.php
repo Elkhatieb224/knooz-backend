@@ -34,12 +34,30 @@ class NotificationSystemTest extends TestCase
     public function test_admin_preview_and_open_notification(): void
     {
         $admin = $this->makeAdmin();
+        $customer = User::query()->forceCreate([
+            'name' => 'عميل تحويل',
+            'email' => 'pay-customer@knooz.test',
+            'phone' => '0557007001',
+            'password' => 'password',
+            'role' => UserRole::CustomerIndividual,
+            'status' => UserStatus::Active,
+            'theme' => Theme::Light,
+        ]);
+        $payment = \App\Models\Payment::query()->create([
+            'user_id' => $customer->id,
+            'amount' => 250,
+            'method' => 'bank_transfer',
+            'status' => 'pending',
+            'notes' => 'تحويل تجريبي',
+        ]);
+
         $service = app(NotificationService::class);
         $service->storeMany(
             collect([$admin]),
             NotificationType::PaymentPending,
             'دفعة معلقة',
             'راجع التحويل البنكي',
+            reference: $payment,
             eventKey: 'test:admin:payment',
         );
 
@@ -53,9 +71,58 @@ class NotificationSystemTest extends TestCase
 
         $this->actingAs($admin, 'admin')
             ->get(route('admin.notifications.open', $notification->id))
-            ->assertRedirect();
+            ->assertRedirect(route('admin.payments.show', $payment));
 
         $this->assertNotNull($notification->fresh()->read_at);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.payments.show', $payment))
+            ->assertOk()
+            ->assertSee('250');
+    }
+
+    public function test_open_uses_reference_from_notification_data_when_columns_missing(): void
+    {
+        $admin = $this->makeAdmin('data-ref@knooz.test');
+        $customer = User::query()->forceCreate([
+            'name' => 'عميل بيانات',
+            'email' => 'data-ref-customer@knooz.test',
+            'phone' => '0557007009',
+            'password' => 'password',
+            'role' => UserRole::CustomerIndividual,
+            'status' => UserStatus::Active,
+            'theme' => Theme::Light,
+        ]);
+        $payment = \App\Models\Payment::query()->create([
+            'user_id' => $customer->id,
+            'amount' => 88,
+            'method' => 'bank_transfer',
+            'status' => 'pending',
+            'notes' => 'مرجع في data فقط',
+        ]);
+
+        $id = (string) \Illuminate\Support\Str::uuid();
+        DatabaseNotification::query()->create([
+            'id' => $id,
+            'type' => \App\Notifications\PanelNotification::class,
+            'notifiable_type' => $admin->getMorphClass(),
+            'notifiable_id' => $admin->id,
+            'notification_type' => NotificationType::PaymentPending->value,
+            'reference_type' => null,
+            'reference_id' => null,
+            'event_key' => 'test:admin:payment-data-ref',
+            'data' => [
+                'title' => 'دفعة من البيانات',
+                'body' => 'مرجع محفوظ داخل data',
+                'notification_type' => NotificationType::PaymentPending->value,
+                'reference_type' => $payment->getMorphClass(),
+                'reference_id' => $payment->id,
+            ],
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.notifications.open', $id))
+            ->assertRedirect(route('admin.payments.show', $payment));
     }
 
     public function test_user_cannot_open_another_users_notification(): void
@@ -158,7 +225,7 @@ class NotificationSystemTest extends TestCase
         $center = $this->makeCenter('Center');
         $centerUser = $this->makeCenterUser($center, 'center@knooz.test');
 
-        $customer = User::query()->create([
+        $customer = User::query()->forceCreate([
             'name' => 'Customer',
             'email' => 'customer@test.com',
             'password' => 'password',
@@ -206,7 +273,7 @@ class NotificationSystemTest extends TestCase
 
     protected function makeAdmin(string $email = 'admin@knooz.test'): AdminUser
     {
-        return AdminUser::query()->create([
+        return AdminUser::query()->forceCreate([
             'name' => 'Admin',
             'email' => $email,
             'password' => 'password',
@@ -230,7 +297,7 @@ class NotificationSystemTest extends TestCase
 
     protected function makeCompanyUser(Company $company, string $email): CompanyUser
     {
-        return CompanyUser::query()->create([
+        return CompanyUser::query()->forceCreate([
             'company_id' => $company->id,
             'name' => 'Company User',
             'email' => $email,
@@ -252,7 +319,7 @@ class NotificationSystemTest extends TestCase
 
     protected function makeCenterUser(Center $center, string $email): CenterUser
     {
-        return CenterUser::query()->create([
+        return CenterUser::query()->forceCreate([
             'center_id' => $center->id,
             'name' => 'Center User',
             'email' => $email,

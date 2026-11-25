@@ -13,10 +13,17 @@
 @section('content')
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div class="page-title mb-0">الإشعارات</div>
-    <form method="POST" action="{{ route($readAllRoute) }}">
-        @csrf
-        <button class="btn btn-outline-knooz" type="submit">تعليم الكل كمقروء</button>
-    </form>
+    <div class="d-flex flex-wrap gap-2">
+        @if (($panel ?? '') === 'admin')
+            @can('notifications.manage')
+                <a href="{{ route('admin.notifications.broadcast') }}" class="btn btn-primary">إرسال إشعار جماعي</a>
+            @endcan
+        @endif
+        <form method="POST" action="{{ route($readAllRoute) }}">
+            @csrf
+            <button class="btn btn-outline-knooz" type="submit">تعليم الكل كمقروء</button>
+        </form>
+    </div>
 </div>
 
 <form method="GET" action="{{ route($indexRoute) }}" class="filters-bar mb-3">

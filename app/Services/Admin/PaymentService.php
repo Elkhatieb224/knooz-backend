@@ -27,7 +27,7 @@ class PaymentService
                 'status' => PaymentStatus::Approved,
                 'reviewed_by' => $legacyUserId,
                 'reviewed_at' => now(),
-                'notes' => $notes ?? $payment->notes,
+                'notes' => $this->mergeReviewNotes($payment->notes, $notes, 'قبول'),
             ]);
 
             $wallet = $this->resolveWallet($payment);
@@ -63,10 +63,24 @@ class PaymentService
             'status' => PaymentStatus::Rejected,
             'reviewed_by' => $this->legacyUserId($reviewer),
             'reviewed_at' => now(),
-            'notes' => $notes ?? $payment->notes,
+            'notes' => $this->mergeReviewNotes($payment->notes, $notes, 'رفض'),
         ]);
 
         return $payment->fresh(['user', 'company', 'wallet', 'reviewer']);
+    }
+
+    protected function mergeReviewNotes(?string $existing, ?string $reviewNote, string $action): ?string
+    {
+        $existing = trim((string) $existing);
+        $reviewNote = trim((string) $reviewNote);
+
+        if ($reviewNote === '') {
+            return $existing !== '' ? $existing : null;
+        }
+
+        $line = sprintf('[مراجعة — %s — %s] %s', $action, now()->format('Y-m-d H:i'), $reviewNote);
+
+        return $existing !== '' ? $existing."\n".$line : $line;
     }
 
     protected function legacyUserId(AdminUser|User $reviewer): ?int

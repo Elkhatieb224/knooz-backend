@@ -100,19 +100,18 @@ class ReportService
             ->get([
                 'operations.amount',
                 'center_service.app_profit',
+                'center_service.app_profit_mode',
                 'center_service.contract_price',
             ]);
 
         $net = 0.0;
         foreach ($rows as $row) {
-            $amount = (float) $row->amount;
-            if ($row->app_profit !== null) {
-                $net += max(0, $amount - (float) $row->app_profit);
-            } elseif ($row->contract_price !== null) {
-                $net += (float) $row->contract_price;
-            } else {
-                $net += $amount;
-            }
+            $net += \App\Support\CenterServiceCommission::netForCenter(
+                (float) $row->amount,
+                $row->app_profit !== null ? (float) $row->app_profit : null,
+                $row->app_profit_mode,
+                $row->contract_price !== null ? (float) $row->contract_price : null,
+            );
         }
 
         return $net;

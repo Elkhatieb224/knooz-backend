@@ -5,8 +5,10 @@ use App\Http\Controllers\Center\BookingController;
 use App\Http\Controllers\Center\DashboardController;
 use App\Http\Controllers\Center\NotificationController;
 use App\Http\Controllers\Center\OperationController;
+use App\Http\Controllers\Center\ProductController;
 use App\Http\Controllers\Center\ProfileController;
 use App\Http\Controllers\Center\ReportController;
+use App\Http\Controllers\Center\StaffController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('center')->name('center.')->group(function () {
@@ -29,6 +31,21 @@ Route::prefix('center')->name('center.')->group(function () {
         Route::patch('operations/{operation}', [OperationController::class, 'update'])->name('operations.update');
 
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+
+        Route::get('staff', [StaffController::class, 'index'])->name('staff.index');
+        Route::get('staff/create', [StaffController::class, 'create'])->name('staff.create');
+        Route::post('staff', [StaffController::class, 'store'])->name('staff.store');
+        Route::get('staff/{staff}/edit', [StaffController::class, 'edit'])->name('staff.edit');
+        Route::put('staff/{staff}', [StaffController::class, 'update'])->name('staff.update');
+        Route::post('staff/{staff}/toggle-status', [StaffController::class, 'toggleStatus'])->name('staff.toggle');
+
+        Route::get('products', [ProductController::class, 'index'])->name('products.index');
+        Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
+        Route::post('products', [ProductController::class, 'store'])->name('products.store');
+        Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+        Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
+        Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+        Route::post('products/{product}/toggle', [ProductController::class, 'toggleStatus'])->name('products.toggle');
 
         Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');

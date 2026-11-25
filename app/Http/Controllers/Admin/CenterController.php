@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\CenterStatus;
 use App\Enums\CenterType;
+use App\Enums\CenterUserRole;
+use App\Enums\Theme;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCenterRequest;
 use App\Http\Requests\Admin\UpdateCenterRequest;
@@ -11,6 +14,7 @@ use App\Models\Center;
 use App\Models\CenterUser;
 use App\Models\Service;
 use App\Services\Notifications\NotificationHooks;
+use App\Support\ServiceChannels;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,11 +43,24 @@ class CenterController extends Controller
             })
             ->when($request->filled('type'), fn ($q) => $q->where('type', $request->string('type')))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->when($request->filled('channel'), function ($q) use ($request) {
+                $channel = $request->string('channel')->toString();
+                if (in_array($channel, [ServiceChannels::CENTER, ServiceChannels::HOME, ServiceChannels::EMERGENCY], true)) {
+                    $q->offeringChannel($channel);
+                }
+            })
             ->latest()
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.centers.index', compact('centers'));
+        return view('admin.centers.index', [
+            'centers' => $centers,
+            'channels' => [
+                ServiceChannels::CENTER => ServiceChannels::labels()[ServiceChannels::CENTER],
+                ServiceChannels::HOME => ServiceChannels::labels()[ServiceChannels::HOME],
+                ServiceChannels::EMERGENCY => ServiceChannels::labels()[ServiceChannels::EMERGENCY],
+            ],
+        ]);
     }
 
     public function create(): View
@@ -58,22 +75,40 @@ class CenterController extends Controller
         $this->authorize('centers.manage');
 
         $center = DB::transaction(function () use ($request) {
-            $data = $request->safe()->except(['services']);
+            $data = $request->safe()->except([
+                'services',
+                'manager_name',
+                'manager_email',
+                'manager_phone',
+                'manager_password',
+                'manager_password_confirmation',
+                'manager_center_user_id',
+            ]);
+
             $center = Center::query()->create($data);
             $this->syncServices($center, $request->input('services', []));
 
-            if (! empty($data['manager_center_user_id'])) {
-                CenterUser::query()->whereKey($data['manager_center_user_id'])->update(['center_id' => $center->id]);
-            }
+            $manager = CenterUser::query()->create([
+                'center_id' => $center->id,
+                'name' => $request->validated('manager_name'),
+                'email' => $request->validated('manager_email'),
+                'phone' => $request->validated('manager_phone'),
+                'password' => $request->validated('manager_password'),
+                'role' => CenterUserRole::Manager,
+                'status' => UserStatus::Active,
+                'theme' => Theme::Light,
+            ]);
 
-            return $center;
+            $center->update(['manager_center_user_id' => $manager->id]);
+
+            return $center->fresh(['managerCenterUser']);
         });
 
         $this->notificationHooks->centerCreated($center);
 
         return redirect()
-            ->route('admin.centers.index')
-            ->with('success', 'تم إنشاء المركز بنجاح.');
+            ->route('admin.centers.show', $center)
+            ->with('success', 'تم إنشاء المركز وحساب مسؤول المركز بنجاح.');
     }
 
     public function show(Center $center): View
@@ -104,7 +139,9 @@ class CenterController extends Controller
             $this->syncServices($center, $request->input('services', []));
 
             if (! empty($data['manager_center_user_id'])) {
-                CenterUser::query()->whereKey($data['manager_center_user_id'])->update(['center_id' => $center->id]);
+                CenterUser::query()
+                    ->whereKey($data['manager_center_user_id'])
+                    ->update(['center_id' => $center->id]);
             }
         });
 
@@ -133,10 +170,28 @@ class CenterController extends Controller
      */
     protected function formData(): array
     {
+        $services = Service::query()
+            ->where('is_active', true)
+            ->whereIn('channel', [
+                ServiceChannels::CENTER,
+                ServiceChannels::HOME,
+                ServiceChannels::EMERGENCY,
+            ])
+            ->orderBy('channel')
+            ->orderBy('sort_order')
+            ->orderBy('name_ar')
+            ->get();
+
         return [
             'types' => CenterType::labels(),
             'statuses' => CenterStatus::labels(),
-            'services' => Service::query()->orderBy('name_ar')->get(),
+            'services' => $services,
+            'servicesByChannel' => $services->groupBy(fn (Service $s) => $s->channel ?: 'other'),
+            'channelLabels' => [
+                ServiceChannels::CENTER => ServiceChannels::labels()[ServiceChannels::CENTER],
+                ServiceChannels::HOME => ServiceChannels::labels()[ServiceChannels::HOME],
+                ServiceChannels::EMERGENCY => ServiceChannels::labels()[ServiceChannels::EMERGENCY],
+            ],
             'managers' => CenterUser::query()->orderBy('name')->get(),
         ];
     }
@@ -146,6 +201,12 @@ class CenterController extends Controller
      */
     protected function syncServices(Center $center, array $services): void
     {
+        $allowedChannels = $center->offeredChannels();
+        $catalog = Service::query()
+            ->whereIn('id', array_keys($services))
+            ->get()
+            ->keyBy('id');
+
         $sync = [];
 
         foreach ($services as $serviceId => $row) {
@@ -153,9 +214,26 @@ class CenterController extends Controller
                 continue;
             }
 
+            $service = $catalog->get((int) $serviceId);
+            if (! $service) {
+                continue;
+            }
+
+            // Only attach services that match an enabled execution channel on this center.
+            if (! in_array((string) $service->channel, $allowedChannels, true)) {
+                continue;
+            }
+
+            $mode = (($row['app_profit_mode'] ?? 'fixed') === 'percent') ? 'percent' : 'fixed';
+            $profit = (float) ($row['app_profit'] ?? 0);
+            if ($mode === 'percent') {
+                $profit = min(100, max(0, $profit));
+            }
+
             $sync[$serviceId] = [
                 'contract_price' => $row['contract_price'] ?? 0,
-                'app_profit' => $row['app_profit'] ?? 0,
+                'app_profit' => $profit,
+                'app_profit_mode' => $mode,
                 'is_available' => ! empty($row['is_available']),
             ];
         }

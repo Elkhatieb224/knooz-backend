@@ -3,7 +3,7 @@
 @section('breadcrumb', 'تعديل منتج متجر')
 @section('content')
 <div class="page-title mb-3">تعديل: {{ $product->name_ar }}</div>
-<form method="POST" action="{{ route('admin.shop-products.update', $product) }}" class="row g-3">
+<form method="POST" action="{{ route('admin.shop-products.update', $product) }}" class="row g-3" enctype="multipart/form-data">
     @csrf
     @method('PUT')
     @include('admin.shop-products._form')

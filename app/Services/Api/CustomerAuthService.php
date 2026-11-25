@@ -22,7 +22,7 @@ class CustomerAuthService
     public function register(array $data): array
     {
         return DB::transaction(function () use ($data) {
-            $user = User::query()->create([
+            $user = User::query()->forceCreate([
                 'name' => $data['name'],
                 'gender' => $data['gender'] ?? null,
                 'email' => $data['email'],

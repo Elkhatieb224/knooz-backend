@@ -25,7 +25,7 @@ class PanelTenantStatusGateTest extends TestCase
             'name' => 'Suspended Co',
             'status' => CompanyStatus::Suspended,
         ]);
-        CompanyUser::query()->create([
+        CompanyUser::query()->forceCreate([
             'company_id' => $company->id,
             'name' => 'Owner',
             'email' => 'susp@co.test',
@@ -50,7 +50,7 @@ class PanelTenantStatusGateTest extends TestCase
             'name' => 'Live Co',
             'status' => CompanyStatus::Active,
         ]);
-        $user = CompanyUser::query()->create([
+        $user = CompanyUser::query()->forceCreate([
             'company_id' => $company->id,
             'name' => 'Owner',
             'email' => 'live@co.test',
@@ -79,7 +79,7 @@ class PanelTenantStatusGateTest extends TestCase
             'status' => CenterStatus::Inactive,
             'city' => 'Riyadh',
         ]);
-        CenterUser::query()->create([
+        CenterUser::query()->forceCreate([
             'center_id' => $center->id,
             'name' => 'Mgr',
             'email' => 'off@center.test',

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Center\V1\CustomerController;
 use App\Http\Controllers\Api\Center\V1\DashboardController;
 use App\Http\Controllers\Api\Center\V1\NotificationController;
 use App\Http\Controllers\Api\Center\V1\OperationController;
+use App\Http\Controllers\Api\Center\V1\ProductController;
 use App\Http\Controllers\Api\Center\V1\ReportController;
 use App\Http\Controllers\Api\Center\V1\ServiceController;
 use Illuminate\Support\Facades\Route;
@@ -50,4 +51,11 @@ Route::middleware(['panel.api', 'center.api'])->group(function () {
 
     Route::get('services', [ServiceController::class, 'index']);
     Route::patch('services/{serviceId}', [ServiceController::class, 'update'])->whereNumber('serviceId');
+
+    Route::get('products', [ProductController::class, 'index']);
+    Route::post('products', [ProductController::class, 'store']);
+    Route::get('products/{id}', [ProductController::class, 'show'])->whereNumber('id');
+    Route::put('products/{id}', [ProductController::class, 'update'])->whereNumber('id');
+    Route::patch('products/{id}', [ProductController::class, 'update'])->whereNumber('id');
+    Route::delete('products/{id}', [ProductController::class, 'destroy'])->whereNumber('id');
 });

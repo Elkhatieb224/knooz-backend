@@ -23,7 +23,12 @@ class HomeController extends Controller
 
         $centersQuery = Center::query()
             ->where('status', CenterStatus::Active)
-            ->with(['services' => fn ($q) => $q->where('is_active', true)]);
+            ->where(function ($q) {
+                $q->where('offers_center_service', true)
+                    ->orWhere('offers_home_service', true)
+                    ->orWhere('offers_emergency_service', true);
+            })
+            ->with(['services' => fn ($q) => $q->where('is_active', true)->wherePivot('is_available', true)]);
 
         $centers = $centersQuery->limit(20)->get()->map(function (Center $center) use ($lat, $lng) {
             $distance = null;
@@ -40,6 +45,11 @@ class HomeController extends Controller
                 'lng' => $center->lng,
                 'distance_km' => $distance !== null ? round($distance, 2) : null,
                 'services_count' => $center->services->count(),
+                'channels' => [
+                    'center' => (bool) $center->offers_center_service,
+                    'home' => (bool) $center->offers_home_service,
+                    'emergency' => (bool) $center->offers_emergency_service,
+                ],
             ];
         })->sortBy(fn ($c) => $c['distance_km'] ?? 9999)->values();
 

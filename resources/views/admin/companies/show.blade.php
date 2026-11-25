@@ -8,7 +8,7 @@
         <div class="text-muted">{{ $company->payment_mode_label }} · سقف {{ number_format((float)$company->usage_cap,0) }}</div>
     </div>
     @can('companies.manage')
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         <a href="{{ route('admin.companies.edit', $company) }}" class="btn btn-primary">تعديل</a>
         <form method="POST" action="{{ route('admin.companies.destroy', $company) }}" data-confirm="حذف الشركة؟">
             @csrf @method('DELETE')
@@ -17,6 +17,35 @@
     </div>
     @endcan
 </div>
+
+@can('companies.manage')
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="panel border-success-subtle">
+            <div class="panel-header"><strong class="text-success">اعتماد الشركة</strong></div>
+            <div class="panel-body">
+                <form method="POST" action="{{ route('admin.companies.approve', $company) }}">
+                    @csrf
+                    <textarea name="notes" class="form-control mb-2" rows="2" placeholder="تعليق اختياري للشركة">{{ old('notes') }}</textarea>
+                    <button class="btn btn-success w-100" data-confirm-click="اعتماد الشركة وتفعيل دخولها؟">اعتماد وتفعيل</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="panel border-danger-subtle">
+            <div class="panel-header"><strong class="text-danger">رفض / إيقاف</strong></div>
+            <div class="panel-body">
+                <form method="POST" action="{{ route('admin.companies.reject', $company) }}">
+                    @csrf
+                    <textarea name="notes" class="form-control mb-2" rows="2" required placeholder="سبب الرفض أو الإيقاف (إلزامي)">{{ old('notes') }}</textarea>
+                    <button class="btn btn-outline-danger w-100" data-confirm-click="إيقاف الشركة وإشعار مستخدميها؟">رفض / إيقاف مع السبب</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endcan
 
 <div class="row g-3">
     <div class="col-lg-4">

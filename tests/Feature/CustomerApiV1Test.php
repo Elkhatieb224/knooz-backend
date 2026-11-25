@@ -51,7 +51,7 @@ class CustomerApiV1Test extends TestCase
 
     public function test_admin_cannot_login_to_customer_api(): void
     {
-        AdminUser::query()->create([
+        AdminUser::query()->forceCreate([
             'name' => 'Admin',
             'email' => 'admin@knooz.test',
             'password' => 'password',
@@ -61,7 +61,7 @@ class CustomerApiV1Test extends TestCase
         ]);
 
         // Admin lives in admin_users, not users — ensure a staff user on users table is blocked
-        User::query()->create([
+        User::query()->forceCreate([
             'name' => 'Ops',
             'email' => 'ops@staff.test',
             'phone' => '0550000111',
@@ -102,6 +102,7 @@ class CustomerApiV1Test extends TestCase
         $other = $this->makeCustomer('intruder@test.com', '0552222002');
         $center = $this->makeCenter();
         $service = $this->makeService();
+        $this->attachService($center, $service);
         $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
             'plate_number' => 'B-99',
@@ -210,6 +211,7 @@ class CustomerApiV1Test extends TestCase
         $user = $this->makeCustomer('notif-cust@test.com', '0554444003');
         $center = $this->makeCenter();
         $service = $this->makeService();
+        $this->attachService($center, $service);
         $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
             'plate_number' => 'N-11',
@@ -281,7 +283,7 @@ class CustomerApiV1Test extends TestCase
 
     protected function makeCustomer(string $email, string $phone): User
     {
-        return User::query()->create([
+        return User::query()->forceCreate([
             'name' => 'Customer',
             'email' => $email,
             'phone' => $phone,
@@ -294,26 +296,39 @@ class CustomerApiV1Test extends TestCase
         ]);
     }
 
-    protected function makeCenter(): Center
+    protected function makeCenter(array $overrides = []): Center
     {
-        return Center::query()->create([
+        return Center::query()->create(array_merge([
             'name' => 'Center Test',
             'type' => CenterType::Owned,
             'status' => CenterStatus::Active,
             'city' => 'Riyadh',
             'lat' => 24.7,
             'lng' => 46.6,
-        ]);
+            'offers_center_service' => true,
+            'offers_home_service' => true,
+            'offers_emergency_service' => true,
+        ], $overrides));
     }
 
-    protected function makeService(): Service
+    protected function makeService(array $overrides = []): Service
     {
-        return Service::query()->create([
+        return Service::query()->create(array_merge([
             'name_ar' => 'غسيل',
             'name_en' => 'Wash',
             'slug' => 'wash-'.uniqid(),
             'base_price' => 50,
+            'channel' => 'center',
             'is_active' => true,
+        ], $overrides));
+    }
+
+    protected function attachService(Center $center, Service $service): void
+    {
+        $center->services()->attach($service->id, [
+            'contract_price' => $service->base_price,
+            'app_profit' => 0,
+            'is_available' => true,
         ]);
     }
 }

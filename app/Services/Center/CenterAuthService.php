@@ -19,7 +19,7 @@ class CenterAuthService
     public function login(string $login, string $password): array
     {
         $user = CenterUser::query()
-            ->with('center')
+            ->with(['center.services'])
             ->where(function ($q) use ($login) {
                 $q->where('email', $login)->orWhere('phone', $login);
             })

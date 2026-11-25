@@ -19,19 +19,21 @@
 </div>
 <div class="panel"><div class="panel-body">
     <div class="mb-2"><strong>الاسم الإنجليزي:</strong> {{ $product->name_en ?: '—' }}</div>
-    <div class="mb-2"><strong>التصنيف:</strong> {{ $product->category === 'tires' ? 'إطارات' : ($product->category === 'oils' ? 'زيوت' : $product->category) }}</div>
+    <div class="mb-2"><strong>التصنيف:</strong> {{ \App\Enums\ShopProductCategory::tryLabel($product->category) }}</div>
     <div class="mb-2"><strong>الماركة:</strong> {{ $product->brand ?: '—' }}</div>
     <div class="mb-2"><strong>المقاس:</strong> <span class="dir-ltr">{{ $product->size ?: '—' }}</span></div>
     <div class="mb-2"><strong>السعر:</strong> <span class="dir-ltr">{{ number_format((float) $product->price, 2) }}</span></div>
     <div class="mb-2"><strong>المخزون:</strong> <span class="dir-ltr">{{ $product->stock }}</span></div>
-    <div class="mb-2"><strong>Slug:</strong> <span class="dir-ltr">{{ $product->slug }}</span></div>
+    <div class="mb-2"><strong>المعرّف:</strong> <span class="dir-ltr">{{ $product->slug }}</span></div>
     <div class="mb-2"><strong>الوصف:</strong> {{ $product->description ?: '—' }}</div>
     <div class="mb-2"><strong>الصورة:</strong> {{ $product->image_path ?: '—' }}</div>
     <div class="mb-2"><strong>الحالة:</strong> @include('components.admin.status-badge', ['status' => $product->is_active ? 'active' : 'inactive', 'label' => $product->is_active ? 'نشط' : 'متوقف'])</div>
-    @if (!empty($product->meta))
-        <div class="mt-3"><strong>Meta:</strong>
-            <pre class="bg-light p-2 rounded small mb-0">{{ json_encode($product->meta, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</pre>
+    @if (!empty($product->meta['notes']))
+        <div class="mt-3">
+            <strong>بيانات إضافية:</strong>
+            <div class="border rounded p-3 mt-2 shop-product-notes">{!! $product->meta['notes'] !!}</div>
         </div>
     @endif
+
 </div></div>
 @endsection

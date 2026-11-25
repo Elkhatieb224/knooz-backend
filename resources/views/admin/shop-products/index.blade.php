@@ -12,8 +12,9 @@
     <div class="col-md-3">
         <select name="category" class="form-select">
             <option value="">كل التصنيفات</option>
-            <option value="tires" @selected(request('category')==='tires')>إطارات</option>
-            <option value="oils" @selected(request('category')==='oils')>زيوت</option>
+            @foreach (\App\Enums\ShopProductCategory::options() as $value => $label)
+                <option value="{{ $value }}" @selected(request('category')===$value)>{{ $label }}</option>
+            @endforeach
         </select>
     </div>
     <div class="col-md-3">
@@ -31,10 +32,11 @@
             <thead>
                 <tr>
                     <th>المنتج</th>
+                    <th>المركز</th>
                     <th>التصنيف</th>
                     <th>الماركة</th>
-                    <th>المقاس</th>
                     <th>السعر</th>
+                    <th>عمولة التطبيق</th>
                     <th>المخزون</th>
                     <th>الحالة</th>
                     <th></th>
@@ -44,10 +46,20 @@
             @forelse ($products as $product)
                 <tr>
                     <td class="fw-bold">{{ $product->name_ar }}</td>
-                    <td>{{ $product->category === 'tires' ? 'إطارات' : ($product->category === 'oils' ? 'زيوت' : $product->category) }}</td>
+                    <td>{{ $product->center?->name ?: 'المنصة' }}</td>
+                    <td>{{ \App\Enums\ShopProductCategory::tryLabel($product->category) }}</td>
                     <td>{{ $product->brand ?: '—' }}</td>
-                    <td class="dir-ltr">{{ $product->size ?: '—' }}</td>
                     <td class="dir-ltr">{{ number_format((float) $product->price, 2) }}</td>
+                    <td>
+                        @php $b = $product->profitBreakdown(); @endphp
+                        {{ \App\Support\CenterServiceCommission::formatPivot($b['app_profit'], $b['app_profit_mode']) }}
+                        <div class="small text-muted">
+                            @if ($b['has_custom_commission']) مخصصة
+                            @elseif ($b['commission_source'] === 'center_default') عامة للمركز
+                            @else —
+                            @endif
+                        </div>
+                    </td>
                     <td class="dir-ltr">{{ $product->stock }}</td>
                     <td>@include('components.admin.status-badge', ['status' => $product->is_active ? 'active' : 'inactive', 'label' => $product->is_active ? 'نشط' : 'متوقف'])</td>
                     <td class="col-actions">
@@ -60,7 +72,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="8">@include('components.admin.empty-state', ['message' => 'لا توجد منتجات'])</td></tr>
+                <tr><td colspan="9">@include('components.admin.empty-state', ['message' => 'لا توجد منتجات'])</td></tr>
             @endforelse
             </tbody>
         </table>

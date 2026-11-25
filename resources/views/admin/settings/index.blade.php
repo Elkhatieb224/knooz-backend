@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 @section('title', 'الإعدادات')
 @section('breadcrumb', 'الإعدادات')
 @section('content')
@@ -193,10 +193,38 @@
                                 <td>{{ $package->duration_days }} يوم</td>
                                 <td>{{ number_format((float)$package->price, 2) }}</td>
                                 <td>@include('components.admin.status-badge', ['status' => $package->is_active ? 'active' : 'inactive', 'label' => $package->is_active ? 'نشط' : 'متوقف'])</td>
-                                <td>
+                                <td class="text-nowrap">
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-package-{{ $package->id }}">تعديل</button>
                                     <form method="POST" action="{{ route('admin.settings.packages.destroy', $package) }}" data-confirm="حذف الباقة؟" class="d-inline">
                                         @csrf @method('DELETE')
                                         <button class="btn btn-sm btn-outline-danger">حذف</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="edit-package-{{ $package->id }}">
+                                <td colspan="6">
+                                    <form method="POST" action="{{ route('admin.settings.packages.update', $package) }}" class="row g-2 p-2">
+                                        @csrf @method('PUT')
+                                        <div class="col-md-3"><input name="name" class="form-control" value="{{ $package->name }}" required></div>
+                                        <div class="col-md-2">
+                                            <select name="type" class="form-select" required>
+                                                @foreach ($packageTypes as $value => $label)
+                                                    <option value="{{ $value }}" @selected($package->type?->value === $value)>{{ $label }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-1"><input type="number" name="duration_days" class="form-control" value="{{ $package->duration_days }}" required></div>
+                                        <div class="col-md-1"><input type="number" name="operations_count" class="form-control" value="{{ $package->operations_count }}" required></div>
+                                        <div class="col-md-1"><input type="number" name="vehicles_count" class="form-control" value="{{ $package->vehicles_count }}" required></div>
+                                        <div class="col-md-1"><input type="number" step="0.01" name="price" class="form-control" value="{{ $package->price }}" required></div>
+                                        <div class="col-md-1"><input type="number" step="0.01" name="discount_percent" class="form-control" value="{{ $package->discount_percent }}"></div>
+                                        <div class="col-md-1 d-flex align-items-center">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="is_active" value="1" @checked($package->is_active)>
+                                                <label class="form-check-label">نشط</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1"><button class="btn btn-success w-100">حفظ</button></div>
                                     </form>
                                 </td>
                             </tr>

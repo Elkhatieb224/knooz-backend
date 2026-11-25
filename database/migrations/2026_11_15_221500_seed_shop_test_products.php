@@ -12,6 +12,11 @@ return new class extends Migration
             return;
         }
 
+        // Keep RefreshDatabase tests deterministic (no seeded catalog noise).
+        if (app()->environment('testing')) {
+            return;
+        }
+
         $now = now();
         $rows = [
             [

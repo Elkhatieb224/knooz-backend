@@ -33,6 +33,7 @@ class RequestHubController extends Controller
             'operations' => [
                 'items' => Operation::query()
                     ->with(['user', 'vehicle', 'center', 'service'])
+                    ->when($request->filled('id'), fn ($q) => $q->whereKey($request->integer('id')))
                     ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
                     ->when($request->filled('q'), function ($q) use ($request) {
                         $term = '%'.$request->string('q').'%';
@@ -45,6 +46,7 @@ class RequestHubController extends Controller
             'complaints' => [
                 'items' => Complaint::query()
                     ->with(['user', 'assignee'])
+                    ->when($request->filled('id'), fn ($q) => $q->whereKey($request->integer('id')))
                     ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
                     ->when($request->filled('q'), function ($q) use ($request) {
                         $term = '%'.$request->string('q').'%';
@@ -60,6 +62,7 @@ class RequestHubController extends Controller
             'emergency' => [
                 'items' => EmergencyRequest::query()
                     ->with(['user', 'vehicle', 'employee'])
+                    ->when($request->filled('id'), fn ($q) => $q->whereKey($request->integer('id')))
                     ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
                     ->when($request->filled('q'), function ($q) use ($request) {
                         $term = '%'.$request->string('q').'%';
@@ -75,6 +78,7 @@ class RequestHubController extends Controller
             default => [
                 'items' => Booking::query()
                     ->with(['user', 'vehicle', 'center', 'service'])
+                    ->when($request->filled('id'), fn ($q) => $q->whereKey($request->integer('id')))
                     ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
                     ->when($request->filled('q'), function ($q) use ($request) {
                         $term = '%'.$request->string('q').'%';

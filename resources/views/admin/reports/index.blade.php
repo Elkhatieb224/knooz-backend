@@ -19,6 +19,9 @@
     <div class="col-md-3"><input type="date" name="from" value="{{ $from->format('Y-m-d') }}" class="form-control"></div>
     <div class="col-md-3"><input type="date" name="to" value="{{ $to->format('Y-m-d') }}" class="form-control"></div>
     <div class="col-md-2"><button class="btn btn-outline-knooz w-100">تطبيق</button></div>
+    <div class="col-md-1">
+        <a class="btn btn-outline-primary w-100" href="{{ route('admin.reports.export', request()->query()) }}" title="تصدير CSV">CSV</a>
+    </div>
 </form>
 
 @if ($type === 'financial')

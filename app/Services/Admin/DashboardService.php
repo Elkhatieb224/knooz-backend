@@ -146,21 +146,23 @@ class DashboardService
 
     public function userActivity(): array
     {
-        $days = collect(range(6, 0))->map(function (int $i) {
+        $start = now()->subDays(6)->startOfDay();
+        $counts = User::query()
+            ->whereNotNull('last_login_at')
+            ->where('last_login_at', '>=', $start)
+            ->get(['last_login_at'])
+            ->groupBy(fn (User $user) => $user->last_login_at->toDateString())
+            ->map->count();
+
+        $labels = [];
+        $values = [];
+        for ($i = 6; $i >= 0; $i--) {
             $day = now()->subDays($i)->startOfDay();
+            $labels[] = $day->translatedFormat('D');
+            $values[] = (int) ($counts[$day->toDateString()] ?? 0);
+        }
 
-            return [
-                'label' => $day->translatedFormat('D'),
-                'count' => User::query()
-                    ->whereDate('last_login_at', $day->toDateString())
-                    ->count(),
-            ];
-        });
-
-        return [
-            'labels' => $days->pluck('label')->all(),
-            'values' => $days->pluck('count')->all(),
-        ];
+        return compact('labels', 'values');
     }
 
     protected function percentChange(float|int $current, float|int $previous): float
@@ -172,19 +174,27 @@ class DashboardService
         return round((($current - $previous) / $previous) * 100, 1);
     }
 
+    protected function approvedPaymentsSince(Carbon $from): Collection
+    {
+        return Payment::query()
+            ->whereIn('status', [PaymentStatus::Paid->value, PaymentStatus::Approved->value])
+            ->where('created_at', '>=', $from)
+            ->get(['amount', 'created_at']);
+    }
+
     protected function chartByMonths(int $count): array
     {
+        $from = now()->subMonths($count - 1)->startOfMonth();
+        $payments = $this->approvedPaymentsSince($from);
+        $buckets = $payments->groupBy(fn (Payment $p) => $p->created_at->format('Y-m'))
+            ->map(fn (Collection $rows) => (float) $rows->sum('amount'));
+
         $labels = [];
         $values = [];
-
         for ($i = $count - 1; $i >= 0; $i--) {
             $month = now()->subMonths($i);
             $labels[] = $month->translatedFormat('M');
-            $values[] = (float) Payment::query()
-                ->whereIn('status', [PaymentStatus::Paid->value, PaymentStatus::Approved->value])
-                ->whereYear('created_at', $month->year)
-                ->whereMonth('created_at', $month->month)
-                ->sum('amount');
+            $values[] = (float) ($buckets[$month->format('Y-m')] ?? 0);
         }
 
         return compact('labels', 'values');
@@ -192,16 +202,17 @@ class DashboardService
 
     protected function chartByDays(int $count): array
     {
+        $from = now()->subDays($count - 1)->startOfDay();
+        $payments = $this->approvedPaymentsSince($from);
+        $buckets = $payments->groupBy(fn (Payment $p) => $p->created_at->toDateString())
+            ->map(fn (Collection $rows) => (float) $rows->sum('amount'));
+
         $labels = [];
         $values = [];
-
         for ($i = $count - 1; $i >= 0; $i--) {
             $day = now()->subDays($i);
             $labels[] = $day->format('d/m');
-            $values[] = (float) Payment::query()
-                ->whereIn('status', [PaymentStatus::Paid->value, PaymentStatus::Approved->value])
-                ->whereDate('created_at', $day->toDateString())
-                ->sum('amount');
+            $values[] = (float) ($buckets[$day->toDateString()] ?? 0);
         }
 
         return compact('labels', 'values');
@@ -209,16 +220,17 @@ class DashboardService
 
     protected function chartByWeeks(int $count): array
     {
+        $from = now()->subWeeks($count - 1)->startOfWeek();
+        $payments = $this->approvedPaymentsSince($from);
+
         $labels = [];
         $values = [];
-
         for ($i = $count - 1; $i >= 0; $i--) {
             $start = now()->subWeeks($i)->startOfWeek();
             $end = $start->copy()->endOfWeek();
             $labels[] = 'أ'.$start->weekOfYear;
-            $values[] = (float) Payment::query()
-                ->whereIn('status', [PaymentStatus::Paid->value, PaymentStatus::Approved->value])
-                ->whereBetween('created_at', [$start, $end])
+            $values[] = (float) $payments
+                ->filter(fn (Payment $p) => $p->created_at->between($start, $end))
                 ->sum('amount');
         }
 
@@ -227,16 +239,17 @@ class DashboardService
 
     protected function chartByYears(int $count): array
     {
+        $from = now()->subYears($count - 1)->startOfYear();
+        $payments = $this->approvedPaymentsSince($from);
+        $buckets = $payments->groupBy(fn (Payment $p) => (string) $p->created_at->year)
+            ->map(fn (Collection $rows) => (float) $rows->sum('amount'));
+
         $labels = [];
         $values = [];
-
         for ($i = $count - 1; $i >= 0; $i--) {
-            $year = now()->subYears($i)->year;
-            $labels[] = (string) $year;
-            $values[] = (float) Payment::query()
-                ->whereIn('status', [PaymentStatus::Paid->value, PaymentStatus::Approved->value])
-                ->whereYear('created_at', $year)
-                ->sum('amount');
+            $year = (string) now()->subYears($i)->year;
+            $labels[] = $year;
+            $values[] = (float) ($buckets[$year] ?? 0);
         }
 
         return compact('labels', 'values');

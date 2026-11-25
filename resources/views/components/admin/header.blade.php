@@ -1,4 +1,4 @@
-﻿@php
+@php
     $user = auth('admin')->user();
     $unread = app(\App\Services\Notifications\NotificationService::class)->unreadCount($user);
 @endphp
@@ -17,9 +17,11 @@
     </div>
 
     <div class="header-actions">
-        <form action="@yield('search_action', '#')" method="GET" class="d-none d-md-block">
-            <input type="search" name="q" value="{{ request('q') }}" class="search-box" placeholder="بحث...">
-        </form>
+        @hasSection('search_action')
+            <form action="@yield('search_action')" method="GET" class="d-none d-md-block">
+                <input type="search" name="q" value="{{ request('q') }}" class="search-box" placeholder="بحث...">
+            </form>
+        @endif
 
         @include('components.notifications.dropdown', ['panel' => 'admin', 'unread' => $unread])
 

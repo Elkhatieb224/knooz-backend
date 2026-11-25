@@ -23,6 +23,7 @@ class StoreOfferRequest extends FormRequest
             'service_id' => ['nullable', 'exists:services,id'],
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after_or_equal:starts_at'],
+            'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

@@ -25,8 +25,33 @@
                 <div class="mb-2">الحالة: @include('components.admin.status-badge', ['status' => $center->status])</div>
                 <div class="mb-2">المسؤول: {{ $center->managerCenterUser?->name ?: ($center->manager?->name ?: '—') }}</div>
                 <div class="mb-2">الهاتف: {{ $center->phone ?: '—' }}</div>
-                <div class="mb-2">العنوان: {{ $center->address ?: '—' }}</div>
-                <div>الإحداثيات: {{ $center->lat }}, {{ $center->lng }}</div>
+                <div class="mb-2">
+                    <div class="small text-muted mb-1">عمولة منتجات المركز (عامة)</div>
+                    <div class="mb-2">
+                        {{ \App\Support\CenterServiceCommission::formatPivot($center->product_app_profit !== null ? (float) $center->product_app_profit : null, $center->product_app_profit_mode) }}
+                        <span class="small text-muted">— تُطبَّق إن لم تُحدد عمولة مخصصة للمنتج</span>
+                    </div>
+                    <div class="small text-muted mb-1">قنوات التنفيذ</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @if ($center->offers_center_service)<span class="badge text-bg-success">خدمة في المركز</span>@endif
+                        @if ($center->offers_home_service)<span class="badge text-bg-primary">خدمة عند المنزل</span>@endif
+                        @if ($center->offers_emergency_service)<span class="badge text-bg-warning text-dark">طوارئ الطريق</span>@endif
+                        @if (! $center->offers_center_service && ! $center->offers_home_service && ! $center->offers_emergency_service)
+                            <span class="text-muted">لا توجد قنوات مفعّلة</span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="panel mt-3">
+            <div class="panel-header"><strong>الموقع</strong></div>
+            <div class="panel-body">
+                @include('components.admin.location-map-view', [
+                    'lat' => $center->lat,
+                    'lng' => $center->lng,
+                    'address' => $center->address,
+                    'label' => collect([$center->name, $center->address, $center->city])->filter()->unique()->implode(' — '),
+                ])
             </div>
         </div>
     </div>
@@ -35,17 +60,18 @@
             <div class="panel-header"><strong>الخدمات</strong></div>
             <div class="table-responsive">
                 <table class="table table-admin">
-                    <thead><tr><th>الخدمة</th><th>سعر الاتفاق</th><th>ربح التطبيق</th><th>متاحة</th></tr></thead>
+                    <thead><tr><th>الخدمة</th><th>القناة</th><th>سعر الاتفاق</th><th>عمولة التطبيق</th><th>متاحة</th></tr></thead>
                     <tbody>
                     @forelse ($center->services as $service)
                         <tr>
                             <td>{{ $service->name_ar }}</td>
-                            <td>{{ number_format((float)$service->pivot->contract_price, 2) }}</td>
-                            <td>{{ number_format((float)$service->pivot->app_profit, 2) }}</td>
+                            <td>{{ \App\Support\ServiceChannels::labels()[$service->channel] ?? ($service->channel ?: '—') }}</td>
+                            <td>{{ number_format((float)$service->pivot->contract_price, 2) }} ر.س</td>
+                            <td>{{ \App\Support\CenterServiceCommission::formatPivot($service->pivot->app_profit !== null ? (float) $service->pivot->app_profit : null, $service->pivot->app_profit_mode) }}</td>
                             <td>{{ $service->pivot->is_available ? 'نعم' : 'لا' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4">@include('components.admin.empty-state', ['message' => 'لا توجد خدمات'])</td></tr>
+                        <tr><td colspan="5">@include('components.admin.empty-state', ['message' => 'لا توجد خدمات'])</td></tr>
                     @endforelse
                     </tbody>
                 </table>

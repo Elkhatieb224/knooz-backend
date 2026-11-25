@@ -29,7 +29,7 @@ class PanelAuthIsolationTest extends TestCase
 
     public function test_admin_can_login_and_access_admin_dashboard(): void
     {
-        AdminUser::query()->create([
+        AdminUser::query()->forceCreate([
             'name' => 'Admin',
             'email' => 'admin@knooz.test',
             'password' => 'password',
@@ -106,7 +106,7 @@ class PanelAuthIsolationTest extends TestCase
         $centerB = $this->makeCenter('Center B');
         $this->makeCenterUser($centerA, 'center-a@knooz.test');
 
-        $customer = User::query()->create([
+        $customer = User::query()->forceCreate([
             'name' => 'Customer',
             'email' => 'customer@test.com',
             'password' => 'password',
@@ -166,7 +166,7 @@ class PanelAuthIsolationTest extends TestCase
 
     protected function makeCompanyUser(Company $company, string $email): CompanyUser
     {
-        return CompanyUser::query()->create([
+        return CompanyUser::query()->forceCreate([
             'company_id' => $company->id,
             'name' => 'Company User',
             'email' => $email,
@@ -188,7 +188,7 @@ class PanelAuthIsolationTest extends TestCase
 
     protected function makeCenterUser(Center $center, string $email): CenterUser
     {
-        return CenterUser::query()->create([
+        return CenterUser::query()->forceCreate([
             'center_id' => $center->id,
             'name' => 'Center User',
             'email' => $email,

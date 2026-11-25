@@ -8,7 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ApiResponse;
 use App\Models\EmergencyRequest;
 use App\Models\Service;
+use App\Services\Centers\CenterDispatchService;
 use App\Services\Notifications\NotificationService;
+use App\Support\ServiceChannels;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,14 +19,16 @@ use Illuminate\Validation\ValidationException;
 
 class EmergencyController extends Controller
 {
-    public function __construct(protected NotificationService $notifications)
-    {
+    public function __construct(
+        protected NotificationService $notifications,
+        protected CenterDispatchService $dispatch,
+    ) {
     }
 
     public function index(Request $request): JsonResponse
     {
         $items = EmergencyRequest::query()
-            ->with(['vehicle'])
+            ->with(['vehicle', 'center'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate(20);
@@ -40,7 +44,7 @@ class EmergencyController extends Controller
     {
         $allowedKinds = Service::query()
             ->where('is_active', true)
-            ->where('channel', 'emergency')
+            ->where('channel', ServiceChannels::EMERGENCY)
             ->whereNotNull('kind_key')
             ->pluck('kind_key')
             ->unique()
@@ -65,6 +69,7 @@ class EmergencyController extends Controller
             'destination.lng' => ['nullable', 'numeric'],
             'destination.address' => ['nullable', 'string', 'max:255'],
             'plate' => ['nullable', 'string', 'max:32'],
+            'vehicle_type' => ['nullable', 'string', 'max:40'],
         ]);
 
         $service = null;
@@ -72,13 +77,13 @@ class EmergencyController extends Controller
             $service = Service::query()
                 ->whereKey($data['service_id'])
                 ->where('is_active', true)
-                ->where('channel', 'emergency')
+                ->where('channel', ServiceChannels::EMERGENCY)
                 ->first();
         }
         if ($service === null) {
             $service = Service::query()
                 ->where('is_active', true)
-                ->where('channel', 'emergency')
+                ->where('channel', ServiceChannels::EMERGENCY)
                 ->where('kind_key', $data['kind'])
                 ->orderBy('sort_order')
                 ->first();
@@ -87,11 +92,19 @@ class EmergencyController extends Controller
         $requires = $service?->requiredFields() ?? ['location'];
         $this->assertRequirements($requires, $data);
 
+        $assignedCenter = $this->dispatch->nearestForChannel(
+            ServiceChannels::EMERGENCY,
+            (float) $data['lat'],
+            (float) $data['lng'],
+            $service?->id,
+        );
+
         $payload = array_merge($data['payload'] ?? [], [
-            'channel' => 'emergency',
+            'channel' => ServiceChannels::EMERGENCY,
             'service_id' => $service?->id,
             'service_name' => $service?->name_ar,
             'kind_key' => $data['kind'],
+            'assigned_center_id' => $assignedCenter?->id,
             'place' => [
                 'lat' => (float) $data['lat'],
                 'lng' => (float) $data['lng'],
@@ -104,11 +117,21 @@ class EmergencyController extends Controller
         if (! empty($data['plate'])) {
             $payload['plate'] = $data['plate'];
         }
+        if (! empty($data['vehicle_type'])) {
+            $payload['vehicle_type'] = $data['vehicle_type'];
+        }
+        if (empty($payload['vehicle_type']) && ! empty(($data['payload']['vehicle_type'] ?? null))) {
+            $payload['vehicle_type'] = $data['payload']['vehicle_type'];
+        }
+        if (empty($payload['plate']) && ! empty(($data['payload']['plate'] ?? null))) {
+            $payload['plate'] = $data['payload']['plate'];
+        }
 
-        $emergency = DB::transaction(function () use ($request, $data, $payload) {
+        $emergency = DB::transaction(function () use ($request, $data, $payload, $assignedCenter) {
             $emergency = EmergencyRequest::query()->create([
                 'user_id' => $request->user()->id,
                 'vehicle_id' => $data['vehicle_id'] ?? null,
+                'center_id' => $assignedCenter?->id,
                 'lat' => $data['lat'],
                 'lng' => $data['lng'],
                 'address' => $data['address'],
@@ -140,6 +163,18 @@ class EmergencyController extends Controller
             queue: false,
         );
 
+        if ($assignedCenter) {
+            $this->notifications->notify(
+                $this->notifications->centerUsers((int) $assignedCenter->id),
+                NotificationType::EmergencyNew,
+                'طلب طوارئ جديد لمركزكم',
+                'نوع: '.$kindLabel.' — '.$request->user()->name.' — '.$data['address'],
+                $emergency,
+                eventKey: sprintf('emergency:%d:center-assigned', $emergency->id),
+                queue: false,
+            );
+        }
+
         $this->notifications->notify(
             $request->user(),
             NotificationType::EmergencyNew,
@@ -150,7 +185,7 @@ class EmergencyController extends Controller
             queue: false,
         );
 
-        return ApiResponse::success($emergency->load('vehicle'), 'تم إرسال طلب الطوارئ.', 201);
+        return ApiResponse::success($emergency->load(['vehicle', 'center']), 'تم إرسال طلب الطوارئ.', 201);
     }
 
     /**
@@ -160,14 +195,22 @@ class EmergencyController extends Controller
     protected function assertRequirements(array $requires, array $data): void
     {
         $errors = [];
-        if (in_array('vehicle', $requires, true) && empty($data['vehicle_id'])) {
-            $errors['vehicle_id'] = ['هذه الخدمة تتطلب اختيار مركبة.'];
+        $plate = $data['plate']
+            ?? ($data['payload']['plate'] ?? null);
+        $vehicleType = $data['vehicle_type']
+            ?? ($data['payload']['vehicle_type'] ?? null);
+
+        if (in_array('vehicle', $requires, true)
+            && empty($data['vehicle_id'])
+            && empty($vehicleType)
+        ) {
+            $errors['vehicle_type'] = ['حدد نوع المركبة.'];
         }
-        if (in_array('plate', $requires, true) && empty($data['plate'])) {
-            $errors['plate'] = ['هذه الخدمة تتطلب رقم اللوحة.'];
-        }
-        if (in_array('notes', $requires, true) && empty($data['notes'])) {
-            // soft: notes optional in practice unless explicitly strict — keep optional for UX
+        if ((in_array('plate', $requires, true) || in_array('vehicle', $requires, true))
+            && empty($plate)
+            && empty($data['vehicle_id'])
+        ) {
+            $errors['plate'] = ['أدخل رقم اللوحة.'];
         }
         if (in_array('destination', $requires, true)) {
             $dest = $data['destination'] ?? null;
@@ -189,7 +232,7 @@ class EmergencyController extends Controller
             ->first();
 
         return ApiResponse::success([
-            'request' => $emergency->load('vehicle'),
+            'request' => $emergency->load(['vehicle', 'center']),
             'kind' => $meta->request_kind ?? null,
             'payload' => $meta ? json_decode($meta->payload ?: '{}', true) : null,
         ]);

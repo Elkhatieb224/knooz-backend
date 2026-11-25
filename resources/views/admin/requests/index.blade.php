@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 @section('title', 'الطلبات والشكاوي')
 @section('breadcrumb', 'الطلبات والشكاوي')
 @section('search_action', route('admin.requests.index', ['tab' => $tab]))
@@ -59,13 +59,14 @@
                         <td>@include('components.admin.status-badge', ['status' => $item->status])</td>
                         <td class="col-actions">
                             @can('bookings.manage')
-                            <form method="POST" action="{{ route('admin.requests.bookings.update', $item) }}" class="d-flex gap-1 justify-content-end">
+                            <form method="POST" action="{{ route('admin.requests.bookings.update', $item) }}" class="d-flex flex-column gap-1 align-items-stretch">
                                 @csrf @method('PATCH')
                                 <select name="status" class="form-select form-select-sm">
                                     @foreach ($bookingStatuses as $value => $label)
                                         <option value="{{ $value }}" @selected($item->status?->value===$value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
+                                <input type="text" name="notes" class="form-control form-control-sm" placeholder="ملاحظة" value="{{ $item->notes }}">
                                 <button class="btn btn-sm btn-primary">حفظ</button>
                             </form>
                             @endcan
@@ -89,13 +90,14 @@
                         <td>@include('components.admin.status-badge', ['status' => $item->status])</td>
                         <td>
                             @can('bookings.manage')
-                            <form method="POST" action="{{ route('admin.requests.operations.update', $item) }}" class="d-flex gap-1">
+                            <form method="POST" action="{{ route('admin.requests.operations.update', $item) }}" class="d-flex flex-column gap-1">
                                 @csrf @method('PATCH')
                                 <select name="status" class="form-select form-select-sm">
                                     @foreach ($operationStatuses as $value => $label)
                                         <option value="{{ $value }}" @selected($item->status?->value===$value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
+                                <input type="text" name="notes" class="form-control form-control-sm" placeholder="ملاحظة" value="{{ $item->notes }}">
                                 <button class="btn btn-sm btn-primary">حفظ</button>
                             </form>
                             @endcan
@@ -147,18 +149,33 @@
                     <tr>
                         <td>{{ $item->user?->name }}</td>
                         <td>{{ $item->vehicle?->plate_number }}</td>
-                        <td>{{ $item->address }}</td>
+                        <td>
+                            @if ($item->address || ($item->lat && $item->lng))
+                                @php
+                                    $placeLabel = $item->address ?: 'موقع محفوظ';
+                                    $mapsQ = ($item->lat && $item->lng)
+                                        ? urlencode($item->lat.','.$item->lng.($item->address ? ' ('.str_replace(['(',')'], '', $item->address).')' : ''))
+                                        : urlencode((string) $item->address);
+                                @endphp
+                                <a href="https://www.google.com/maps?q={{ $mapsQ }}" target="_blank" rel="noopener" title="عرض على الخريطة">
+                                    {{ $placeLabel }}
+                                </a>
+                            @else
+                                —
+                            @endif
+                        </td>
                         <td>{{ $item->employee?->name ?: '—' }}</td>
                         <td>@include('components.admin.status-badge', ['status' => $item->status])</td>
                         <td>
                             @can('bookings.manage')
-                            <form method="POST" action="{{ route('admin.requests.emergency.update', $item) }}" class="d-flex gap-1">
+                            <form method="POST" action="{{ route('admin.requests.emergency.update', $item) }}" class="d-flex flex-column gap-1">
                                 @csrf @method('PATCH')
                                 <select name="status" class="form-select form-select-sm">
                                     @foreach ($emergencyStatuses as $value => $label)
                                         <option value="{{ $value }}" @selected($item->status?->value===$value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
+                                <input type="text" name="notes" class="form-control form-control-sm" placeholder="ملاحظة" value="{{ $item->notes }}">
                                 <button class="btn btn-sm btn-primary">حفظ</button>
                             </form>
                             @endcan

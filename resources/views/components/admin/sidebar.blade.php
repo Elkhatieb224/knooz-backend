@@ -11,7 +11,9 @@
         ['route' => 'admin.reports.index', 'label' => 'التقارير والتحليلات', 'icon' => 'bi-bar-chart', 'perm' => null],
         ['route' => 'admin.offers.index', 'label' => 'العروض والإعلانات', 'icon' => 'bi-megaphone', 'perm' => 'offers.manage'],
         ['route' => 'admin.shop-products.index', 'label' => 'منتجات المتجر', 'icon' => 'bi-bag', 'perm' => 'shop.manage'],
+        ['route' => 'admin.content.index', 'label' => 'المحتوى', 'icon' => 'bi-file-earmark-text', 'perm' => 'settings.manage'],
         ['route' => 'admin.settings.index', 'label' => 'الإعدادات', 'icon' => 'bi-gear', 'perm' => 'settings.manage'],
+        ['route' => 'admin.activity-logs.index', 'label' => 'سجل النشاط', 'icon' => 'bi-clock-history', 'perm' => 'settings.manage'],
         ['route' => 'admin.roles.index', 'label' => 'الصلاحيات والأدوار', 'icon' => 'bi-shield-lock', 'perm' => 'roles.manage'],
         ['route' => 'admin.notifications.index', 'label' => 'الإشعارات', 'icon' => 'bi-bell', 'perm' => 'notifications.view'],
     ];

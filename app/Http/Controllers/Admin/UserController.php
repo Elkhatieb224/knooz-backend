@@ -56,7 +56,7 @@ class UserController extends Controller
         $data = $request->validated();
         $codes = $this->qrCodeService->generatePair('USER');
 
-        User::query()->create([
+        User::query()->forceCreate([
             ...$data,
             'role' => UserRole::CustomerIndividual,
             'status' => $data['status'] ?? UserStatus::Active->value,
@@ -97,9 +97,9 @@ class UserController extends Controller
             if (empty($data['password'])) {
                 unset($data['password']);
             }
-            $user->update($data);
+            $user->forceFill($data)->save();
         } elseif ($request->user()->can('users.activate')) {
-            $user->update(['status' => $data['status']]);
+            $user->forceFill(['status' => $data['status']])->save();
         } else {
             abort(403);
         }
@@ -126,11 +126,11 @@ class UserController extends Controller
         $this->authorize('users.activate');
         abort_unless($user->role === UserRole::CustomerIndividual, 404);
 
-        $user->update([
+        $user->forceFill([
             'status' => $user->status === UserStatus::Active
                 ? UserStatus::Inactive
                 : UserStatus::Active,
-        ]);
+        ])->save();
 
         return back()->with('success', 'تم تحديث حالة المستخدم.');
     }

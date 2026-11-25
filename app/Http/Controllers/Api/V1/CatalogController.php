@@ -9,6 +9,7 @@ use App\Models\Center;
 use App\Models\Offer;
 use App\Models\Package;
 use App\Models\Service;
+use App\Support\ServiceChannels;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -37,9 +38,27 @@ class CatalogController extends Controller
 
     public function centers(Request $request): JsonResponse
     {
+        $channel = $request->string('channel')->toString();
+        $serviceId = $request->filled('service_id') ? (int) $request->integer('service_id') : null;
+
         $query = Center::query()
             ->where('status', CenterStatus::Active)
-            ->with(['services' => fn ($q) => $q->where('is_active', true)])
+            ->with(['services' => function ($q) use ($channel) {
+                $q->where('is_active', true)
+                    ->wherePivot('is_available', true)
+                    ->when($channel !== '', fn ($inner) => $inner->where('services.channel', $channel));
+            }])
+            ->when(
+                in_array($channel, [ServiceChannels::CENTER, ServiceChannels::HOME, ServiceChannels::EMERGENCY], true),
+                fn ($q) => $q->offeringChannel($channel)
+            )
+            ->when($serviceId, function ($q) use ($serviceId) {
+                $q->whereHas('services', function ($inner) use ($serviceId) {
+                    $inner->where('services.id', $serviceId)
+                        ->where('services.is_active', true)
+                        ->where('center_service.is_available', true);
+                });
+            })
             ->when($request->filled('city'), fn ($q) => $q->where('city', $request->string('city')))
             ->when($request->filled('q'), function ($q) use ($request) {
                 $term = '%'.$request->string('q').'%';
@@ -52,7 +71,9 @@ class CatalogController extends Controller
 
         $centers = $query->paginate(min(50, max(1, (int) $request->integer('per_page', 20))));
 
-        return ApiResponse::success($centers->items(), 'OK', 200, [
+        $items = collect($centers->items())->map(fn (Center $center) => $this->publicCenterPayload($center));
+
+        return ApiResponse::success($items, 'OK', 200, [
             'current_page' => $centers->currentPage(),
             'last_page' => $centers->lastPage(),
             'total' => $centers->total(),
@@ -63,9 +84,52 @@ class CatalogController extends Controller
     {
         abort_unless($center->status === CenterStatus::Active, 404);
 
-        $center->load(['services' => fn ($q) => $q->where('is_active', true)]);
+        $center->load(['services' => fn ($q) => $q->where('is_active', true)->wherePivot('is_available', true)]);
 
-        return ApiResponse::success($center);
+        return ApiResponse::success($this->publicCenterPayload($center));
+    }
+
+    /**
+     * Hide internal pricing pivot fields from the public catalog.
+     *
+     * @return array<string, mixed>
+     */
+    protected function publicCenterPayload(Center $center): array
+    {
+        return [
+            'id' => $center->id,
+            'name' => $center->name,
+            'type' => $center->type?->value ?? $center->type,
+            'phone' => $center->phone,
+            'email' => $center->email,
+            'address' => $center->address,
+            'city' => $center->city,
+            'lat' => $center->lat,
+            'lng' => $center->lng,
+            'status' => $center->status?->value ?? $center->status,
+            'channels' => [
+                'center' => (bool) $center->offers_center_service,
+                'home' => (bool) $center->offers_home_service,
+                'emergency' => (bool) $center->offers_emergency_service,
+            ],
+            'offers_center_service' => (bool) $center->offers_center_service,
+            'offers_home_service' => (bool) $center->offers_home_service,
+            'offers_emergency_service' => (bool) $center->offers_emergency_service,
+            'services' => $center->services->map(fn (Service $service) => [
+                'id' => $service->id,
+                'name_ar' => $service->name_ar,
+                'name_en' => $service->name_en,
+                'slug' => $service->slug,
+                'icon' => $service->icon,
+                'description' => $service->description,
+                'base_price' => $service->base_price,
+                'channel' => $service->channel,
+                'kind_key' => $service->kind_key,
+                'requires' => $service->requires,
+                'flow_hint' => $service->flow_hint,
+                'is_available' => (bool) ($service->pivot?->is_available ?? true),
+            ])->values(),
+        ];
     }
 
     public function offers(): JsonResponse

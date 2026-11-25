@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\CatalogController;
+use App\Http\Controllers\Api\V1\ContentController;
 use App\Http\Controllers\Api\V1\HomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,3 +14,4 @@ Route::get('centers', [CatalogController::class, 'centers']);
 Route::get('centers/{center}', [CatalogController::class, 'showCenter']);
 Route::get('offers', [CatalogController::class, 'offers']);
 Route::get('packages', [CatalogController::class, 'packages']);
+Route::get('content/{page}', [ContentController::class, 'show']);

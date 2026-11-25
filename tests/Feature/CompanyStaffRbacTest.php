@@ -160,7 +160,7 @@ class CompanyStaffRbacTest extends TestCase
         CompanyUserRole $role,
         ?string $phone = null,
     ): CompanyUser {
-        return CompanyUser::query()->create([
+        return CompanyUser::query()->forceCreate([
             'company_id' => $company->id,
             'name' => $email,
             'email' => $email,

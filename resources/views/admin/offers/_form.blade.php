@@ -34,3 +34,10 @@
         <label class="form-check-label" for="is_active">نشط</label>
     </div>
 </div>
+<div class="col-md-8">
+    <label class="form-label">صورة العرض</label>
+    <input type="file" name="image" class="form-control" accept="image/*">
+    @if ($offer?->image_path)
+        <div class="small text-muted mt-1">الحالية: {{ $offer->image_path }}</div>
+    @endif
+</div>

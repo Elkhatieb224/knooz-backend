@@ -10,6 +10,7 @@ use App\Models\Center;
 use App\Models\CenterUser;
 use App\Models\Operation;
 use App\Models\User;
+use App\Support\CenterServiceCommission;
 
 class DashboardService
 {
@@ -77,13 +78,12 @@ class DashboardService
             foreach ($completedToday as $op) {
                 $pivot = $pivots->get($op->service_id)?->pivot;
                 $amount = (float) $op->amount;
-                if ($pivot && $pivot->app_profit !== null) {
-                    $net += max(0, $amount - (float) $pivot->app_profit);
-                } elseif ($pivot && $pivot->contract_price !== null) {
-                    $net += (float) $pivot->contract_price;
-                } else {
-                    $net += $amount;
-                }
+                $net += CenterServiceCommission::netForCenter(
+                    $amount,
+                    $pivot?->app_profit !== null ? (float) $pivot->app_profit : null,
+                    $pivot?->app_profit_mode,
+                    $pivot?->contract_price !== null ? (float) $pivot->contract_price : null,
+                );
             }
             $todayRevenueNet = round($net, 2);
         }
@@ -111,12 +111,47 @@ class DashboardService
             ]),
             'incoming_bookings' => $incomingBookings,
             'active_operations' => $activeOperations,
-            'quick_actions' => [
-                ['key' => 'lookup', 'label' => 'مسح / بحث مركبة'],
-                ['key' => 'create_operation', 'label' => 'عملية جديدة'],
-                ['key' => 'bookings', 'label' => 'الحجوزات'],
-                ['key' => 'reports', 'label' => 'التقارير'],
+            'channels' => [
+                'center' => (bool) $center->offers_center_service,
+                'home' => (bool) $center->offers_home_service,
+                'emergency' => (bool) $center->offers_emergency_service,
             ],
+            'capabilities' => [
+                'branch_operations' => (bool) $center->offers_center_service,
+                'bookings' => (bool) ($center->offers_center_service || $center->offers_home_service),
+                'home_visits' => (bool) $center->offers_home_service,
+                'emergency' => (bool) $center->offers_emergency_service,
+                'operations' => (bool) $center->offers_center_service,
+                'products' => (bool) $center->offers_center_service,
+                'reports' => (bool) ($center->offers_center_service || $center->offers_home_service || $center->offers_emergency_service),
+            ],
+            'quick_actions' => $this->quickActionsFor($center),
         ];
+    }
+
+    /**
+     * @return list<array{key: string, label: string}>
+     */
+    protected function quickActionsFor(Center $center): array
+    {
+        $actions = [];
+
+        if ($center->offers_center_service) {
+            $actions[] = ['key' => 'lookup', 'label' => 'مسح / بحث مركبة'];
+            $actions[] = ['key' => 'create_operation', 'label' => 'عملية جديدة'];
+            $actions[] = ['key' => 'products', 'label' => 'منتجات المركز'];
+        }
+        if ($center->offers_center_service || $center->offers_home_service) {
+            $actions[] = ['key' => 'bookings', 'label' => 'الحجوزات'];
+        }
+        if ($center->offers_home_service) {
+            $actions[] = ['key' => 'home_visits', 'label' => 'طلبات منزلية'];
+        }
+        if ($center->offers_emergency_service) {
+            $actions[] = ['key' => 'emergency', 'label' => 'طلبات طوارئ'];
+        }
+        $actions[] = ['key' => 'reports', 'label' => 'التقارير'];
+
+        return $actions;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\Theme;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
@@ -11,6 +12,7 @@ use App\Support\Roles;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
 class RoleController extends Controller
@@ -38,6 +40,39 @@ class RoleController extends Controller
             'labels' => Permissions::labels(),
             'roleLabels' => Roles::adminLabels(),
         ]);
+    }
+
+    public function create(): View
+    {
+        $this->authorize('roles.manage');
+
+        return view('admin.roles.create', [
+            'roles' => Roles::adminLabels(),
+            'statuses' => UserStatus::labels(),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $this->authorize('roles.manage');
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:admin_users,email'],
+            'phone' => ['required', 'string', 'max:30', 'unique:admin_users,phone'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+            'role' => ['required', Rule::in(Roles::adminRoles())],
+            'status' => ['required', Rule::enum(UserStatus::class)],
+        ]);
+
+        AdminUser::query()->create([
+            ...$data,
+            'theme' => Theme::Light,
+        ]);
+
+        return redirect()
+            ->route('admin.roles.index')
+            ->with('success', 'تم إنشاء حساب الإدارة بنجاح.');
     }
 
     public function edit(AdminUser $admin): View
